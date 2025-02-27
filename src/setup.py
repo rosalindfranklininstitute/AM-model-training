@@ -24,6 +24,7 @@ _logger = logging.getLogger("adaptive_milling_training")
 
 
 class TransformLabels(transforms.AsDiscrete):
+    """A transform to change/swap/combine label values as part of the transforms, and optionally split them into separate channels via AsDiscrete"""
     def __init__(
         self, num_labels: int, *label_changes: tuple[int, int], to_onehot: bool = False
     ) -> None:
