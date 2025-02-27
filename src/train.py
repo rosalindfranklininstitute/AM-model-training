@@ -1,13 +1,12 @@
 from __future__ import annotations
 import logging
 import typing
-from pathlib import Path
 
-import monai.utils
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-import monai
+from monai.networks.nets import UNet
+from monai.utils.misc import first
 from monai import data, transforms, losses
 from monai.inferers import sliding_window_inference
 from monai.metrics import DiceMetric
@@ -19,6 +18,8 @@ if typing.TYPE_CHECKING:
 
 __all__ = ["train"]
 
+_logger = logging.getLogger("adaptive_milling_training")
+
 
 def train(
     training_data: data.ArrayDataset,
@@ -26,33 +27,40 @@ def train(
     label_count: int,
     model_path: str | PathLike[str],
     epochs: int = 10,
+    cpu_only: bool = False,
 ) -> None:
+    device = torch.device(
+        "cuda" if not cpu_only and torch.cuda.is_available() else "cpu"
+    )
+
+    use_gpu = device.type == "cuda"
+
     training_data_count = len(training_data)
     train_batch_size = 4
     check_loader = data.DataLoader(
         training_data,
         batch_size=10,
         num_workers=2,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=use_gpu,
     )
 
-    first = monai.utils.misc.first(check_loader)
-    assert first is not None, "DataLoader check failed"
-    print(first[0].shape, first[1].shape)
+    first_batch = first(check_loader)
+    assert first_batch is not None, "DataLoader check failed"
+    print(first_batch[0].shape, first_batch[1].shape)
 
     train_loader = data.DataLoader(
         training_data,
         batch_size=train_batch_size,
         shuffle=True,
         num_workers=8,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=use_gpu,
     )
 
     val_loader = data.DataLoader(
         validation_data,
         batch_size=1,
         num_workers=4,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=use_gpu,
     )
 
     dice_metric = DiceMetric(
@@ -63,8 +71,7 @@ def train(
         [transforms.Activations(sigmoid=True), transforms.AsDiscrete(threshold=0.5)]
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = monai.networks.nets.UNet(
+    model = UNet(
         spatial_dims=2,
         in_channels=1,
         out_channels=label_count,
@@ -72,7 +79,7 @@ def train(
         strides=(2, 2, 2, 2),
         num_res_units=2,
     ).to(device)
-    loss_function = losses.DiceLoss(sigmoid=True)
+    loss_function = losses.DiceLoss(sigmoid=True, to_onehot_y=False)
     optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 
     # start a typical PyTorch training
@@ -103,7 +110,7 @@ def train(
             writer.add_scalar("train_loss", loss.item(), epoch_len * epoch + step)
         epoch_loss /= step
         epoch_loss_values.append(epoch_loss)
-        print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+        _logger.info(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
         if (epoch + 1) % val_interval == 0:
             model.eval()
@@ -138,8 +145,8 @@ def train(
                     best_metric = metric
                     best_metric_epoch = epoch + 1
                     torch.save(model.state_dict(), model_path)
-                    print(f"Saved new best metric model: {model_path}")
-                print(
+                    _logger.info(f"Saved new best metric model: {model_path}")
+                _logger.info(
                     "current epoch: {} current mean dice: {:.4f} best mean dice: {:.4f} at epoch {}".format(
                         epoch + 1, metric, best_metric, best_metric_epoch
                     )
@@ -149,7 +156,11 @@ def train(
                 plot_2d_or_3d_image(val_images, epoch + 1, writer, index=0, tag="image")
                 plot_2d_or_3d_image(val_labels, epoch + 1, writer, index=0, tag="label")
                 plot_2d_or_3d_image(
-                    val_outputs, epoch + 1, writer, index=0, tag="output"
+                    val_outputs,  # type: ignore[arg-type]
+                    epoch + 1,
+                    writer,
+                    index=0,
+                    tag="output",
                 )
 
     print(
