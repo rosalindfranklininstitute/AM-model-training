@@ -8,3 +8,4 @@ monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard]
 ipykernel
 ipywidgets
 jupyter
+ipympl
