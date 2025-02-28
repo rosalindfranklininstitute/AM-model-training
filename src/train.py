@@ -139,11 +139,11 @@ def find_learning_rate(
     )
     # for grad, loss in zip(*lr_finder.get_lrs_and_losses())
     #     print(f"Gradient, loss: {grad}, {loss}")
-    print(f"Steepest gradient, corresponding loss: {lr_finder.get_steepest_gradient()}")
+    sg, sg_loss = lr_finder.get_steepest_gradient()
+    msg = f"Steepest gradient: {sg:2e}, loss: {sg_loss:2e}"
+    print(msg)
     _ = lr_finder.plot(ax=ax)
-    ax.set_title(
-        f"Steepest gradient, corresponding loss: {lr_finder.get_steepest_gradient()}"
-    )
+    ax.set_title(msg)
 
 
 def setup_training_engines(
