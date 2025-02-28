@@ -122,15 +122,13 @@ def find_learning_rate(
     training_objects: TrainingObjects,
     lower_learning_rate: float = 1e-6,
     upper_learning_rate: float = 1e-2,
-    cpu_only: bool = False,
     iterations: int = 20,
 ) -> None:
-    device = get_device(cpu_only)
     lr_finder = optimizers.LearningRateFinder(
         model=training_objects.model,
         optimizer=training_objects.optimizer,
         criterion=training_objects.loss_function,
-        device=device,
+        device=training_objects.device,
     )
     lr_finder.range_test(
         training_objects.training_dataloader,
@@ -152,13 +150,11 @@ def setup_training_engines(
     training_objects: TrainingObjects,
     model_path: str | PathLike[str],
     epochs: int = 10,
-    cpu_only: bool = False,
 ) -> tuple[engines.Trainer, engines.Evaluator]:
     model_path = Path(model_path)
 
-    device = get_device(cpu_only)
     trainer = engines.SupervisedTrainer(
-        device,
+        training_objects.device,
         max_epochs=epochs,
         train_data_loader=training_objects.training_dataloader,
         network=training_objects.model,
@@ -168,7 +164,7 @@ def setup_training_engines(
         key_train_metric=training_objects.metric,
     )
     evaluator = engines.SupervisedEvaluator(
-        device,
+        training_objects.device,
         val_data_loader=training_objects.validation_dataloader,
         network=training_objects.model,
         postprocessing=training_objects.post_transform,
