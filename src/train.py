@@ -277,7 +277,9 @@ def train(
                     ):
                         torch.save(training_objects.model.state_dict(), model_path)
                         _logger.info(f"Saved new best metric model: {model_path}")
-                    writer.add_scalars(epoch_key_val_metrics, epoch + 1)
+                    writer.add_scalars(
+                        "epoch_key_val_metrics", epoch_key_val_metrics, epoch + 1
+                    )
                     mlflow.log_metrics(
                         training_parameters.current_metrics, step=epoch + 1
                     )
