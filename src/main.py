@@ -47,7 +47,7 @@ def plot_learning_rates(
 
     device = setup.get_device(cpu_only)
 
-    lr_dir = Path.cwd().parent / "learning_rate"
+    lr_dir = Path.cwd().parent / "logs" / "learning_rate"
     lr_dir.mkdir(exist_ok=True)
 
     model_kwargs: dict[str, typing.Any] = {
