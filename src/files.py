@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
+from utils import MONAI_KEYS
+
 if typing.TYPE_CHECKING:
     from os import PathLike
     from numpy.typing import NDArray
@@ -15,7 +17,11 @@ __all__ = ["paths_dataframe_from_csv", "paths_array_from_csv"]
 def paths_dataframe_from_csv(fp: str | PathLike[str]) -> pd.DataFrame:
     fp = Path(fp).absolute()
     df = pd.read_csv(
-        fp, header=None, names=["sem", "labels"], skipinitialspace=True, dtype=str
+        fp,
+        header=None,
+        names=[MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+        skipinitialspace=True,
+        dtype=str,
     )
     base = fp.parent
 

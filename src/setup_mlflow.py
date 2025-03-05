@@ -5,9 +5,7 @@ from monai.handlers import MLFlowHandler
 
 
 def setup_mlflow(
-    tracking_uri: str,
-    training_engine,
-    evaluation_engine,
+    training_engine, evaluation_engine, tracking_uri: str | None = None
 ) -> None:
     train_mlflow_handler = MLFlowHandler(
         tracking_uri=tracking_uri,

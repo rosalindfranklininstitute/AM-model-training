@@ -5,8 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from os import PathLike
 
-import mlflow
-
 import matplotlib.pyplot as plt
 
 import setup
@@ -26,6 +24,8 @@ def plot_learning_rates(
     csv_path: str | PathLike[str],
     cpu_only: bool = False,
     models_to_ignore: list[str] | None = None,
+    iterations: int = 20,
+    image_size: int = 1536,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
@@ -35,19 +35,17 @@ def plot_learning_rates(
 
     label_count = 5
 
-    array = files.paths_array_from_csv(csv_path)
-
-    image_size = 1536
+    df = files.paths_dataframe_from_csv(csv_path)
 
     training_data, validation_data = setup.create_datasets(
-        *setup.split_array(array),
+        df,
         image_size=image_size,
         label_count=label_count,
         validation_split=0.2,
     )
     _logger.info("Datasets loaded")
 
-    device = train.get_device(cpu_only)
+    device = setup.get_device(cpu_only)
 
     lr_dir = Path.cwd().parent / "learning_rate"
     lr_dir.mkdir(exist_ok=True)
@@ -85,19 +83,19 @@ def plot_learning_rates(
                 **loss_kwargs
             )
 
-            training_objects = train.setup_training_objects(
+            training_objects = setup.setup_training_objects(
                 device,
                 training_data=training_data,
                 validation_data=validation_data,
                 loss_function=loss_function,
                 model=model,
+                num_classes=label_count,
                 # training_data_workers=0,
                 # validation_data_workers=0,
             )
 
             train.find_learning_rate(
-                lr_ax,
-                training_objects=training_objects,
+                lr_ax, training_objects=training_objects, iterations=iterations
             )
         except Exception:
             logging.error("Failed to find and plot learning rate", exc_info=True)
@@ -116,6 +114,7 @@ def run_training(
     epochs: int = 30,
     learning_rate: float = 1e-4,
     cpu_only: bool = False,
+    image_size: int = 1536,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
@@ -125,68 +124,81 @@ def run_training(
 
     label_count = 5
 
-    array = files.paths_array_from_csv(csv_path)
-
-    image_size = 1536
+    df = files.paths_dataframe_from_csv(csv_path)
 
     training_data, validation_data = setup.create_datasets(
-        *setup.split_array(array),
+        df,
         image_size=image_size,
         label_count=label_count,
         validation_split=0.2,
     )
     _logger.info("Datasets loaded")
 
-    device = train.get_device(cpu_only)
+    device = setup.get_device(cpu_only)
 
     models_dir = Path.cwd().parent / "models"
     models_dir.mkdir(exist_ok=True)
 
+    model_path = (
+        models_dir
+        / f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{csv_path.stem}_{model_name}.pth"
+    )
+
+    training_parameters = setup.TrainingParameters(
+        num_classes=5,
+        input_image_shape=(image_size, image_size),
+        learning_rate=learning_rate,
+        loss_weights=(1.0, 3.0, 3.0, 5.0, 3.0),
+        key_metric="mean_of_metrics",
+        max_epochs=epochs,
+        model_path=model_path,
+        train_patience=20,
+        val_patience=5,
+        total_training_data=len(training_data),
+        total_validation_data=len(validation_data),
+        training_batch_size=4,
+        validation_batch_size=1,
+    )
+
     model_kwargs: dict[str, typing.Any] = {
-        "label_count": 5,
+        "label_count": training_parameters.num_classes,
         "input_image_size": (image_size, image_size),
     }
     loss_kwargs: dict[str, typing.Any] = {
-        "weights": losses.weights_to_tensor([1.0, 3.0, 3.0, 5.0, 3.0], device=device),
-        "num_classes": label_count,
+        "weights": losses.weights_to_tensor(
+            training_parameters.loss_weights, device=device
+        ),
+        "num_classes": training_parameters.num_classes,
     }
 
     model_creator = models.model_creation_functions[model_name]
 
     loss_function = losses.loss_creation_functions["softdicecldiceloss"](**loss_kwargs)
 
-    model_path = (
-        models_dir
-        / f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{csv_path.stem}_{model_name}.pth"
-    )
     _logger.info("The model will be saved as '%s'", model_path)
-    with mlflow.start_run(description=model_path.stem):
-        _logger.info("Starting training...")
-        model = model_creator(**model_kwargs)
-        training_objects = train.setup_training_objects(
-            device,
-            training_data=training_data,
-            validation_data=validation_data,
-            model=model,
-            loss_function=loss_function,
-            learning_rate=learning_rate,
-        )
-        training_engine, evaluation_engine = train.setup_training_engines(
-            training_objects,
-            model_path=model_path,
-            epochs=epochs,
-            cpu_only=cpu_only,
-        )
-        training_engine.initialize()
-        evaluation_engine.initialize()
-        # setup_mlflow(training_engine, evaluation_engine)
-        training_engine.run()
-        evaluation_engine.run()
-    # train.train(
-    #     training_data,
-    #     validation_data,
-    #     label_count=label_count,
+    _logger.info("Starting training...")
+    model = model_creator(**model_kwargs)
+    training_objects = setup.setup_training_objects(
+        device,
+        training_data=training_data,
+        validation_data=validation_data,
+        model=model,
+        num_classes=label_count,
+        loss_function=loss_function,
+        learning_rate=learning_rate,
+        lr_scheduler_kwargs={"warmup_steps": 5, "t_total": epochs},
+    )
+    # training_engine, evaluation_engine = train.setup_training_engines(
+    #     training_objects,
     #     model_path=model_path,
     #     epochs=epochs,
-    #     cpu_only=cpu_only,
     # )
+    # if use_mlflow:
+    #     from setup_mlflow import setup_mlflow
+
+    #     setup_mlflow(training_engine, evaluation_engine)
+    # training_engine.run()
+    train.train(
+        training_objects,
+        training_parameters=training_parameters,
+    )
