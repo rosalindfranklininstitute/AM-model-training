@@ -118,7 +118,7 @@ class TrainingParameters:
     ) -> bool:
         best = False
         self.current_metrics[stage] = metrics_dict
-        self.curent_epoch = epoch
+        self.current_epoch = epoch
         if (
             not self.best_metrics[stage]
             or self.current_metrics[stage][self.key_metric]
