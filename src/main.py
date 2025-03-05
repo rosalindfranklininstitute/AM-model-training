@@ -111,6 +111,7 @@ def plot_learning_rates(
 def run_training(
     csv_path: str | PathLike[str],
     model_name: str,
+    loss_name: str = "diceloss",
     epochs: int = 30,
     learning_rate: float = 1e-4,
     cpu_only: bool = False,
@@ -173,7 +174,7 @@ def run_training(
 
     model_creator = models.model_creation_functions[model_name]
 
-    loss_function = losses.loss_creation_functions["softdicecldiceloss"](**loss_kwargs)
+    loss_function = losses.loss_creation_functions[loss_name](**loss_kwargs)
 
     _logger.info("The model will be saved as '%s'", model_path)
     _logger.info("Starting training...")
