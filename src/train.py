@@ -103,7 +103,9 @@ def train(
             training_objects.model,
             "model",
             signature=signature,
-            code_paths="https://download.pytorch.org/whl/cu118",
+            pip_requirements=[
+                f"-r {Path(__file__).absolute().parent.parent / 'requirements.txt'}"
+            ],
         )
 
         mlflow.log_params(training_parameters.asdict())
@@ -317,4 +319,7 @@ def train(
         print(
             f"train completed, best_metric: {best_metric:.4f} at epoch: {best_metric_epoch}"
         )
+        mlflow.log_params(
+            training_parameters.asdict()
+        )  # Update to include final values
         writer.close()
