@@ -2,7 +2,7 @@
 torch==2.5.1
 torchvision==0.20.1
 torchaudio==2.5.1
-monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard]
+monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard,ignite]
 
 # notebook
 ipykernel
