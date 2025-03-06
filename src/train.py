@@ -208,13 +208,14 @@ def train(
         epoch_train_metrics.update(epoch_additional_train_metrics)
 
     epoch_train_metrics["epoch_loss"] = epoch_loss
-    training_parameters.update_metrics(
-        epoch=epoch + 1, metrics_dict=epoch_train_metrics, stage="train"
-    )
 
     # Calculate mean metric
     _ = tuple(epoch_key_train_metrics.values())
     epoch_train_metrics["mean_of_metrics"] = sum(_) / len(_)
+
+    training_parameters.update_metrics(
+        epoch=epoch + 1, metrics_dict=epoch_train_metrics, stage="train"
+    )
 
     _logger.info(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
