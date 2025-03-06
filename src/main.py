@@ -27,6 +27,7 @@ def plot_learning_rates(
     loss_name: str = "diceloss",
     iterations: int = 20,
     image_size: int = 1536,
+    model_kwargs: dict[str, typing.Any] | None = None,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
@@ -54,6 +55,7 @@ def plot_learning_rates(
     model_kwargs: dict[str, typing.Any] = {
         "label_count": 5,
         "input_image_size": (image_size, image_size),
+        **model_kwargs,
     }
     loss_kwargs: dict[str, typing.Any] = {
         "weights": losses.weights_to_tensor([1.0, 3.0, 3.0, 5.0, 3.0], device=device),
@@ -77,6 +79,7 @@ def plot_learning_rates(
             model_kwargs: dict[str, typing.Any] = {
                 "label_count": 5,
                 "input_image_size": (image_size, image_size),
+                **model_kwargs,
             }
             model = models.model_creation_functions[model_name](**model_kwargs)
 
@@ -116,7 +119,11 @@ def run_training(
     cpu_only: bool = False,
     image_size: int = 1536,
     frozen_epochs: int = 0,
+    model_kwargs: dict[str, typing.Any] | None = None,
 ) -> None:
+    if model_kwargs is None:
+        model_kwargs = {}
+
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
         raise FileNotFoundError(csv_path)
@@ -167,6 +174,7 @@ def run_training(
     model_kwargs: dict[str, typing.Any] = {
         "label_count": training_parameters.num_classes,
         "input_image_size": (image_size, image_size),
+        **model_kwargs,
     }
     loss_kwargs: dict[str, typing.Any] = {
         "weights": losses.weights_to_tensor(
