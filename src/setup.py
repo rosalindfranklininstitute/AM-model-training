@@ -102,9 +102,6 @@ class TrainingParameters:
     validation_batch_size: int
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
-    current_epoch: int = field(init=False, default=-1)
-    best_train_epochs: int = field(init=False, default=-1)
-    best_val_epoch: int = field(init=False, default=-1)
 
     def __post_init__(self):
         self.current_metrics = {"train": {}, "val": {}}
