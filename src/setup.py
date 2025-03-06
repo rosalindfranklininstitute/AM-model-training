@@ -265,11 +265,9 @@ def setup_training_objects(
     post_train_transform = transforms.Compose(
         [
             transforms.EnsureType(),
-            transforms.Activations(sigmoid=True),
+            transforms.Activations(softmax=True),
             transforms.AsDiscrete(
                 argmax=True,
-                threshold=0.5,
-                # dim=1,
                 to_onehot=num_classes,
             ),
         ]
@@ -278,11 +276,9 @@ def setup_training_objects(
     post_val_transform = transforms.Compose(
         [
             transforms.EnsureType(),
-            transforms.Activations(sigmoid=True),
+            transforms.Activations(softmax=True),
             transforms.AsDiscrete(
                 argmax=True,
-                threshold=0.5,
-                # dim=1,
                 to_onehot=num_classes,
             ),
         ]
