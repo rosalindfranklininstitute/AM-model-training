@@ -196,11 +196,12 @@ def train(
 
     _logger.info(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
+    metrics_to_log = {
+        f"train_{k}": v for k, v in training_parameters.current_metrics["train"].items()
+    }
+    del metrics_to_log["train_epoch"]
     mlflow.log_metrics(
-        {
-            f"train_{k}": v
-            for k, v in training_parameters.current_metrics["train"].items()
-        },
+        metrics_to_log,
         step=epoch + 1,
     )
 
@@ -271,8 +272,12 @@ def validate(
             )
             _logger.info(f"Saved new best metric model: {model_path}")
 
+    metrics_to_log = {
+        f"val_{k}": v for k, v in training_parameters.current_metrics["val"].items()
+    }
+    del metrics_to_log["val_epoch"]
     mlflow.log_metrics(
-        {f"val_{k}": v for k, v in training_parameters.current_metrics["val"].items()},
+        metrics_to_log,
         step=epoch + 1,
     )
 
