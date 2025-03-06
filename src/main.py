@@ -199,7 +199,7 @@ def run_training(
 
     #     setup_mlflow(training_engine, evaluation_engine)
     # training_engine.run()
-    train.train(
+    train.run(
         training_objects,
         training_parameters=training_parameters,
     )
