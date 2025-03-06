@@ -311,6 +311,7 @@ def setup_training_objects(
 
     model = model.to(device)
 
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     grad_scaler = torch.GradScaler(device=device)
 
