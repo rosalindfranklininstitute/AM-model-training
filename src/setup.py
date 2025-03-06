@@ -91,7 +91,7 @@ class TrainingParameters:
     input_image_shape: tuple[int, int]
     learning_rate: float
     loss_weights: tuple[float, ...]
-    key_metric: str
+    best_metric: str
     max_epochs: int
     model_path: str | PathLike[str]
     train_patience: int
@@ -100,6 +100,8 @@ class TrainingParameters:
     training_batch_size: int
     total_validation_data: int
     validation_batch_size: int
+    key_train_metrics: list[str]
+    key_val_metrics: list[str]
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
 
@@ -119,8 +121,8 @@ class TrainingParameters:
         self.current_metrics[stage] = metrics_dict
         if (
             not self.best_metrics[stage]
-            or self.current_metrics[stage][self.key_metric]
-            > self.best_metrics[stage][self.key_metric]
+            or self.current_metrics[stage][self.best_metric]
+            > self.best_metrics[stage][self.best_metric]
         ):
             is_best = True
             _logger.info("New best %s epoch found", stage)
@@ -137,8 +139,8 @@ class TrainingParameters:
                 (f"{name}: {value:.4f}" for name, value in logged_metrics.items())
             ),
             stage,
-            self.key_metric,
-            logged_metrics[self.key_metric],
+            self.best_metric,
+            logged_metrics[self.best_metric],
             best_epoch,
         )
         return is_best
@@ -160,12 +162,10 @@ class TrainingObjects:
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
     grad_scaler: torch.GradScaler
-    key_train_metrics: dict[str, metrics.Metric]
-    key_val_metrics: dict[str, metrics.Metric]
+    train_metrics: dict[str, metrics.Metric]
+    val_metrics: dict[str, metrics.Metric]
     post_train_transform: transforms.Transform | Callable = lambda x: x
     post_val_transform: transforms.Transform | Callable = lambda x: x
-    additional_train_metrics: dict[str, metrics.Metric] | None = None
-    additional_val_metrics: dict[str, metrics.Metric] | None = None
     training_data_workers: InitVar[int] = 8
     validation_data_workers: InitVar[int] = 4
     training_batch_size: int = 4
@@ -240,27 +240,7 @@ def setup_training_objects(
     learning_rate: float = 1e-4,
     **kwargs: typing.Any,
 ) -> TrainingObjects:
-    key_train_metrics = {
-        "mean_iou": metrics.MeanIoU(
-            include_background=True,
-            reduction="mean",
-        ),
-        "mean_dice": metrics.DiceMetric(
-            include_background=True,
-            reduction="mean",
-        ),
-    }
-    # key_train_metrics = {
-    #     "train_acc": ignite_metrics.Accuracy(
-    #         output_transform=from_engine([MONAI_KEYS.PRED, MONAI_KEYS.LABEL]),
-    #         is_multilabel=True,
-    #         device=device,
-    #     )
-    # }
-
-    # cm = ignite_metrics.ConfusionMatrix(num_classes, device=device)
-    key_val_metrics = {
-        # "val_mean_iou": ignite_metrics.mIoU(cm)
+    train_metrics = {
         "mean_iou": metrics.MeanIoU(
             include_background=True,
             reduction="mean",
@@ -271,16 +251,16 @@ def setup_training_objects(
         ),
     }
 
-    additional_train_metrics = None
-    additional_val_metrics = None
-
-    # additional_val_metrics = {
-    #     "train_acc": ignite_metrics.Accuracy(
-    #         output_transform=from_engine([MONAI_KEYS.PRED, MONAI_KEYS.LABEL]),
-    #         is_multilabel=True,
-    #         device=device,
-    #     )
-    # }
+    val_metrics = {
+        "mean_iou": metrics.MeanIoU(
+            include_background=True,
+            reduction="mean",
+        ),
+        "mean_dice": metrics.DiceMetric(
+            include_background=True,
+            reduction="mean",
+        ),
+    }
 
     post_train_transform = transforms.Compose(
         [
@@ -294,7 +274,6 @@ def setup_training_objects(
             ),
         ]
     )
-    # post_train_transform = lambda x: x
 
     post_val_transform = transforms.Compose(
         [
@@ -323,12 +302,10 @@ def setup_training_objects(
         loss_function=loss_function,
         optimizer=optimizer,
         grad_scaler=grad_scaler,
-        key_train_metrics=key_train_metrics,
-        key_val_metrics=key_val_metrics,
+        train_metrics=train_metrics,
+        val_metrics=val_metrics,
         post_train_transform=post_train_transform,
         post_val_transform=post_val_transform,
-        additional_train_metrics=additional_train_metrics,
-        additional_val_metrics=additional_val_metrics,
         **kwargs,
     )
 

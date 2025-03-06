@@ -114,7 +114,7 @@ def run(
                 )
                 if train_stopper.stop_early(
                     training_parameters.current_metrics["train"][
-                        training_parameters.key_metric
+                        training_parameters.best_metric
                     ]
                 ):
                     _logger.info(
@@ -124,7 +124,7 @@ def run(
                     break
                 if val_stopper.stop_early(
                     training_parameters.current_metrics["val"][
-                        training_parameters.key_metric
+                        training_parameters.best_metric
                     ]
                 ):
                     _logger.info(
@@ -138,7 +138,7 @@ def run(
         mlflow.log_param(
             "best_train_metrics", training_parameters.best_metrics["train"]
         )
-        mlflow.log_param("best_train_metrics", training_parameters.best_metrics["val"])
+        mlflow.log_param("best_val_metrics", training_parameters.best_metrics["val"])
 
 
 def train(
@@ -176,41 +176,24 @@ def train(
         calculate_batch_metrics(
             outputs,
             labels,
-            metrics_dict=training_objects.key_train_metrics,
+            metrics_dict=training_objects.train_metrics,
         )
-
-        if training_objects.additional_train_metrics is not None:
-            calculate_batch_metrics(
-                outputs,
-                labels,
-                metrics_dict=training_objects.additional_train_metrics,
-            )
 
     epoch_loss /= step
 
-    epoch_key_train_metrics: dict[str, float] = {}
-    for metric_name, metric_fn in training_objects.key_train_metrics.items():
-        epoch_key_train_metrics[f"{metric_name}"] = metric_fn.aggregate().item()
+    epoch_metrics: dict[str, float] = {}
+    for metric_name, metric_fn in training_objects.train_metrics.items():
+        epoch_metrics[f"{metric_name}"] = metric_fn.aggregate().item()
         metric_fn.reset()
 
-    epoch_train_metrics = epoch_key_train_metrics.copy()
-    if training_objects.additional_train_metrics is not None:
-        epoch_additional_train_metrics: dict[str, float] = {}
-        for metric_name, metric_fn in training_objects.additional_train_metrics.items():
-            epoch_additional_train_metrics[f"{metric_name}"] = (
-                metric_fn.aggregate().item()
-            )
-            metric_fn.reset()
-        epoch_train_metrics.update(epoch_additional_train_metrics)
-
-    epoch_train_metrics["epoch_loss"] = epoch_loss
+    epoch_metrics["epoch_loss"] = epoch_loss
 
     # Calculate mean metric
-    _ = tuple(epoch_key_train_metrics.values())
-    epoch_train_metrics["mean_of_metrics"] = sum(_) / len(_)
+    _ = tuple(epoch_metrics[k] for k in training_parameters.key_train_metrics)
+    epoch_metrics["mean_of_key_metrics"] = sum(_) / len(_)
 
     training_parameters.update_metrics(
-        epoch=epoch + 1, metrics_dict=epoch_train_metrics, stage="train"
+        epoch=epoch + 1, metrics_dict=epoch_metrics, stage="train"
     )
 
     _logger.info(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
@@ -257,7 +240,7 @@ def validate(
             calculate_batch_metrics(
                 val_outputs,
                 val_labels,
-                metrics_dict=training_objects.key_val_metrics,
+                metrics_dict=training_objects.val_metrics,
             )
 
             if training_objects.additional_val_metrics is not None:
@@ -269,35 +252,22 @@ def validate(
 
         epoch_loss /= step
 
-        epoch_key_val_metrics: dict[str, float] = {}
+        epoch_metrics: dict[str, float] = {}
         for (
             metric_name,
             metric_fn,
-        ) in training_objects.key_val_metrics.items():
-            epoch_key_val_metrics[f"{metric_name}"] = metric_fn.aggregate().item()
+        ) in training_objects.val_metrics.items():
+            epoch_metrics[f"{metric_name}"] = metric_fn.aggregate().item()
             metric_fn.reset()
 
-        epoch_val_metrics = epoch_key_val_metrics.copy()
-        if training_objects.additional_val_metrics is not None:
-            epoch_additional_val_metrics: dict[str, float] = {}
-            for (
-                metric_name,
-                metric_fn,
-            ) in training_objects.additional_val_metrics.items():
-                epoch_additional_val_metrics[f"{metric_name}"] = (
-                    metric_fn.aggregate().item()
-                )
-                metric_fn.reset()
-            epoch_val_metrics.update(epoch_additional_val_metrics)
-
-        epoch_val_metrics["epoch_loss"] = epoch_loss
+        epoch_metrics["epoch_loss"] = epoch_loss
 
         # Calculate mean metric
-        _ = tuple(epoch_key_val_metrics.values())
-        epoch_val_metrics["mean_of_metrics"] = sum(_) / len(_)
+        _ = tuple(epoch_metrics[k] for k in training_parameters.key_val_metrics)
+        epoch_metrics["mean_of_key_metrics"] = sum(_) / len(_)
 
         if training_parameters.update_metrics(
-            epoch=epoch + 1, metrics_dict=epoch_val_metrics, stage="val"
+            epoch=epoch + 1, metrics_dict=epoch_metrics, stage="val"
         ):
             torch.save(training_objects.model.state_dict(), model_path)
             mlflow.pytorch.log_model(
