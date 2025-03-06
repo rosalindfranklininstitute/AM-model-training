@@ -148,7 +148,7 @@ class TrainingParameters:
         if not include_metrics:
             del d["current_metrics"]
             del d["best_metrics"]
-        return asdict(self)
+        return d
 
 
 @dataclass
