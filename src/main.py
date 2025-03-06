@@ -24,6 +24,7 @@ def plot_learning_rates(
     csv_path: str | PathLike[str],
     cpu_only: bool = False,
     models_to_ignore: list[str] | None = None,
+    loss_name: str = "diceloss",
     iterations: int = 20,
     image_size: int = 1536,
 ) -> None:
@@ -79,9 +80,7 @@ def plot_learning_rates(
             }
             model = models.model_creation_functions[model_name](**model_kwargs)
 
-            loss_function = losses.loss_creation_functions["softdicecldiceloss"](
-                **loss_kwargs
-            )
+            loss_function = losses.loss_creation_functions[loss_name](**loss_kwargs)
 
             training_objects = setup.setup_training_objects(
                 device,
