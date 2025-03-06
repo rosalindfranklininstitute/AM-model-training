@@ -146,7 +146,11 @@ class TrainingParameters:
         )
         return is_best
 
-    def asdict(self) -> dict[str, typing.Any]:
+    def asdict(self, include_metrics: bool = False) -> dict[str, typing.Any]:
+        d = asdict(self)
+        if not include_metrics:
+            del d["current_metrics"]
+            del d["best_metrics"]
         return asdict(self)
 
 
