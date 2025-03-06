@@ -67,7 +67,9 @@ def plot_learning_rates(
     loss_kwargs: dict[str, typing.Any] = {"num_classes": label_count, **loss_kwargs}
 
     if loss_kwargs["weights"] is not None:
-        loss_kwargs["weights"] = losses.weights_to_tensor(loss_kwargs["weights"])
+        loss_kwargs["weights"] = losses.weights_to_tensor(
+            loss_kwargs["weights"], device=device
+        )
 
     models_to_test = list(models.model_creation_functions.keys())
     if models_to_ignore is not None:
@@ -192,7 +194,9 @@ def run_training(
         **loss_kwargs,
     }
     if loss_kwargs["weights"] is not None:
-        loss_kwargs["weights"] = losses.weights_to_tensor(loss_kwargs["weights"])
+        loss_kwargs["weights"] = losses.weights_to_tensor(
+            loss_kwargs["weights"], device=device
+        )
 
     model_creator = models.model_creation_functions[model_name]
 
