@@ -116,35 +116,35 @@ class TrainingParameters:
         metrics_dict: dict[str, float],
         stage: typing.Literal["train", "val"],
     ) -> bool:
-        best = False
+        is_best = False
+        metrics_dict["epoch"] = epoch
+
         self.current_metrics[stage] = metrics_dict
-        self.current_epoch = epoch
         if (
             not self.best_metrics[stage]
             or self.current_metrics[stage][self.key_metric]
             > self.best_metrics[stage][self.key_metric]
         ):
-            best = True
+            is_best = True
             _logger.info("New best %s epoch found", stage)
             self.best_metrics = self.current_metrics
-            self.best_epoch = self.current_epoch
+
+        logged_metrics = self.current_metrics[stage].copy()
+        best_epoch = logged_metrics.pop("epoch")
 
         _logger.info(
             "Current epoch: %i, stage: %s\n%s\nBest %s %s: %.4f at epoch %i",
             epoch + 1,
             stage,
             "\n".join(
-                (
-                    f"{name}: {value:.4f}"
-                    for name, value in self.current_metrics[stage].items()
-                )
+                (f"{name}: {value:.4f}" for name, value in logged_metrics.items())
             ),
             stage,
             self.key_metric,
-            self.best_metrics[stage][self.key_metric],
-            self.best_epoch,
+            logged_metrics[self.key_metric],
+            best_epoch,
         )
-        return best
+        return is_best
 
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)
