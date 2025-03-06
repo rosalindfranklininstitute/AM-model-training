@@ -102,6 +102,8 @@ def run(
         init_params_dict = training_parameters.asdict(include_metrics=False)
         mlflow.log_params(init_params_dict)
         for epoch in range(training_parameters.max_epochs):
+            print("-" * 10)
+            print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
             train(training_objects, training_parameters, epoch=epoch)
 
             if (epoch + 1) % val_interval == 0:
@@ -146,8 +148,6 @@ def train(
     training_parameters: TrainingParameters,
     epoch: int,
 ) -> None:
-    print("-" * 10)
-    print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
     training_objects.model.train()
     epoch_loss = 0
     for step, batch_data in enumerate(training_objects.training_dataloader, 1):
