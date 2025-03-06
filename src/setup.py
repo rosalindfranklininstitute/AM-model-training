@@ -156,8 +156,8 @@ class TrainingParameters:
 
 @dataclass
 class TrainingObjects:
-    training_data: InitVar[data.ArrayDataset]
-    validation_data: InitVar[data.ArrayDataset]
+    training_data: data.Dataset
+    validation_data: data.Dataset
     device: torch.DeviceObjType
     model: torch.nn.Module
     loss_function: losses._Loss
@@ -169,8 +169,8 @@ class TrainingObjects:
     post_val_transform: transforms.Transform | Callable = lambda x: x
     training_data_workers: InitVar[int] = 8
     validation_data_workers: InitVar[int] = 4
-    training_batch_size: int = 4
-    validation_batch_size: int = 1
+    training_batch_size: InitVar[int] = 4
+    validation_batch_size: InitVar[int] = 1
     training_dataloader: data.Dataloader = field(init=False)
     validation_dataloader: data.Dataloader = field(init=False)
     num_training_data: int = field(init=False)
@@ -184,44 +184,17 @@ class TrainingObjects:
 
     def __post_init__(
         self,
-        training_data: data.Dataset,
-        validation_data: data.Dataset,
         training_data_workers: int,
         validation_data_workers: int,
+        training_batch_size: int,
+        validation_batch_size: int,
         check_loaders: bool,
         lr_scheduler_class: type[torch._LRScheduler],
         lr_scheduler_kwargs: dict[str, typing.Any] | None,
     ) -> None:
-        pin_memory = self.device.type == "cuda"
+        self.num_training_data = len(self.training_data)
 
-        if check_loaders:
-            # Check data loads
-            check_loader = data.DataLoader(
-                training_data,
-                batch_size=10,
-                num_workers=2,
-                pin_memory=pin_memory,
-            )
-            first_batch = first(check_loader)
-            assert first_batch is not None, "DataLoader check failed"
-
-        self.num_training_data = len(training_data)
-        self.training_dataloader = data.DataLoader(
-            training_data,
-            batch_size=self.training_batch_size,
-            shuffle=True,
-            num_workers=training_data_workers,
-            pin_memory=pin_memory,
-        )
-
-        self.num_validation_data = len(validation_data)
-        self.validation_dataloader = data.DataLoader(
-            validation_data,
-            batch_size=self.validation_batch_size,
-            shuffle=True,
-            num_workers=validation_data_workers,
-            pin_memory=pin_memory,
-        )
+        self.num_validation_data = len(self.validation_data)
 
         if lr_scheduler_kwargs is None:
             lr_scheduler_kwargs = {}
@@ -230,11 +203,20 @@ class TrainingObjects:
             optimizer=self.optimizer, **lr_scheduler_kwargs
         )
 
+        load_data(
+            self,
+            training_batch_size=training_batch_size,
+            validation_batch_size=validation_batch_size,
+            check_data_loads=check_loaders,
+            training_workers=training_data_workers,
+            validation_workers=validation_data_workers,
+        )
+
 
 def setup_training_objects(
     device: torch.DeviceObjType,
-    training_data: data.ArrayDataset,
-    validation_data: data.ArrayDataset,
+    training_data: data.Dataset,
+    validation_data: data.Dataset,
     num_classes: int,
     model: torch.nn.Module,
     loss_function: losses._Loss,
@@ -305,6 +287,45 @@ def setup_training_objects(
         post_val_transform=post_val_transform,
         **kwargs,
     )
+
+
+def load_data(
+    training_objects: TrainingObjects,
+    training_batch_size: int,
+    validation_batch_size: int,
+    check_data_loads: bool = True,
+    training_workers: int = 4,
+    validation_workers: int = 1,
+) -> tuple[data.DataLoader, data.DataLoader]:
+    pin_memory = training_objects.device.type == "cuda"
+
+    if check_data_loads:
+        # Check data loads
+        check_loader = data.DataLoader(
+            training_objects.training_data,
+            batch_size=10,
+            num_workers=2,
+            pin_memory=pin_memory,
+        )
+        first_batch = first(check_loader)
+        assert first_batch is not None, "DataLoader check failed"
+
+    training_dataloader = data.DataLoader(
+        training_objects.training_data,
+        batch_size=training_batch_size,
+        shuffle=True,
+        num_workers=training_workers,
+        pin_memory=pin_memory,
+    )
+
+    validation_dataloader = data.DataLoader(
+        training_objects.validation_data,
+        batch_size=validation_batch_size,
+        shuffle=True,
+        num_workers=validation_workers,
+        pin_memory=pin_memory,
+    )
+    return training_dataloader, validation_dataloader
 
 
 def find_learning_rate(
