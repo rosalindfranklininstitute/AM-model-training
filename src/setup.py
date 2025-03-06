@@ -102,6 +102,7 @@ class TrainingParameters:
     validation_batch_size: int
     key_train_metrics: list[str]
     key_val_metrics: list[str]
+    frozen_epochs: int = 0
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
 

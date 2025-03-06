@@ -116,6 +116,7 @@ def run_training(
     learning_rate: float = 1e-4,
     cpu_only: bool = False,
     image_size: int = 1536,
+    frozen_epochs: int = 0,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
@@ -161,6 +162,7 @@ def run_training(
         total_validation_data=len(validation_data),
         training_batch_size=4,
         validation_batch_size=1,
+        frozen_epochs=frozen_epochs,
     )
 
     model_kwargs: dict[str, typing.Any] = {

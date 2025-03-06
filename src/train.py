@@ -99,10 +99,21 @@ def run(
 
         init_params_dict = training_parameters.asdict(include_metrics=False)
         mlflow.log_params(init_params_dict)
+
+        if training_parameters.frozen_epochs > 0:
+            # Freeze model if some initial epochs will be frozen
+            for param in training_objects.model.parameters():
+                param.requires_grad = False
+
         for epoch in range(training_parameters.max_epochs):
             print("-" * 10)
             print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
             train(training_objects, training_parameters, epoch=epoch)
+
+            if epoch > 0 and epoch == training_parameters.frozen_epochs:
+                # Unfreeze (no need if it wasn't frozen)
+                for param in training_objects.model.parameters():
+                    param.requires_grad = True
 
             if (epoch + 1) % val_interval == 0:
                 validate(
