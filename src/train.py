@@ -100,6 +100,36 @@ def run(
         init_params_dict = training_parameters.asdict(include_metrics=False)
         mlflow.log_params(init_params_dict)
 
+        mlflow.log_param(
+            "pre_train_transforms",
+            tuple(
+                f"{_.__class__.__name__}({_.__dict__})"
+                for _ in training_objects.training_data.transform.transforms
+            ),
+        )
+        mlflow.log_param(
+            "post_train_transforms",
+            tuple(
+                f"{_.__class__.__name__}({_.__dict__})"
+                for _ in training_objects.post_train_transform.transforms
+            ),
+        )
+
+        mlflow.log_param(
+            "pre_val_transforms",
+            tuple(
+                f"{_.__class__.__name__}({_.__dict__})"
+                for _ in training_objects.validation_data.transform.transforms
+            ),
+        )
+        mlflow.log_param(
+            "post_val_transforms",
+            tuple(
+                f"{_.__class__.__name__}({_.__dict__})"
+                for _ in training_objects.post_val_transform.transforms
+            ),
+        )
+
         if training_parameters.frozen_epochs > 0:
             # Freeze model if some initial epochs will be frozen
             for param in training_objects.model.encoder.parameters():
