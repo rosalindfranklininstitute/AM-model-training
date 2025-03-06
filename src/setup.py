@@ -90,7 +90,6 @@ class TrainingParameters:
     num_classes: int
     input_image_shape: tuple[int, int]
     learning_rate: float
-    loss_weights: tuple[float, ...]
     best_metric: str
     max_epochs: int
     model_path: str | PathLike[str]
@@ -103,6 +102,7 @@ class TrainingParameters:
     key_train_metrics: list[str]
     key_val_metrics: list[str]
     frozen_epochs: int = 0
+    loss_weights: tuple[float, ...] | None = None
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
 
