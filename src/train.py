@@ -243,13 +243,6 @@ def validate(
                 metrics_dict=training_objects.val_metrics,
             )
 
-            if training_objects.additional_val_metrics is not None:
-                calculate_batch_metrics(
-                    val_outputs,
-                    val_labels,
-                    metrics_dict=training_objects.additional_val_metrics,
-                )
-
         epoch_loss /= step
 
         epoch_metrics: dict[str, float] = {}
