@@ -11,9 +11,8 @@ from torchvision.utils import make_grid, draw_segmentation_masks
 import mlflow
 
 from monai.inferers import sliding_window_inference
-# from monai.visualize import plot_2d_or_3d_image
 
-from utils import MONAI_KEYS, TENSORBOARD_LOG_DIR as _TENSORBOARD_LOG_DIR
+from utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -151,11 +150,8 @@ def train(
     print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
     training_objects.model.train()
     epoch_loss = 0
-    step: int = 0
-
-    for batch_data in training_objects.training_dataloader:
+    for step, batch_data in enumerate(training_objects.training_dataloader, 1):
         batch_data
-        step += 1
         inputs, labels = (
             batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
             batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
@@ -230,9 +226,10 @@ def validate(
     model_signature: mlflow.models.ModelSignature | None = None,
 ) -> None:
     training_objects.model.eval()
+    epoch_loss = 0
     with torch.no_grad():
         val_outputs: tuple[typing.Any] | None = None
-        for val_data in training_objects.validation_dataloader:
+        for step, val_data in enumerate(training_objects.validation_dataloader, 1):
             val_images, val_labels = (
                 val_data[MONAI_KEYS.IMAGE].to(training_objects.device),
                 val_data[MONAI_KEYS.LABEL].to(training_objects.device),
@@ -243,11 +240,13 @@ def validate(
                 val_images, roi_size, sw_batch_size, training_objects.model
             )
 
+            if val_outputs is None:
+                raise TypeError("val_outputs is None")
+
             for i in range(val_outputs.size(0)):
                 val_outputs[i] = training_objects.post_val_transform(val_outputs[i])
 
-            if val_outputs is None:
-                raise TypeError("val_outputs is None")
+            epoch_loss += training_objects.loss_function(val_outputs, val_labels).item()
 
             calculate_batch_metrics(
                 val_outputs,
@@ -261,6 +260,8 @@ def validate(
                     val_labels,
                     metrics_dict=training_objects.additional_val_metrics,
                 )
+
+        epoch_loss /= step
 
         epoch_key_val_metrics: dict[str, float] = {}
         for (
@@ -282,6 +283,8 @@ def validate(
                 )
                 metric_fn.reset()
             epoch_val_metrics.update(epoch_additional_val_metrics)
+
+        epoch_val_metrics["epoch_loss"] = epoch_loss
 
         # Calculate mean metric
         _ = tuple(epoch_key_val_metrics.values())
