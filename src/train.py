@@ -170,11 +170,16 @@ def train(
             batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
         )
         training_objects.optimizer.zero_grad()
-        outputs = training_objects.model(inputs)
-        for i in range(outputs.size(0)):
-            outputs[i] = training_objects.post_train_transform(outputs[i])
 
-        loss = training_objects.loss_function(outputs, labels)
+        with torch.autocast(training_objects.device.type):
+            outputs = training_objects.model(inputs)
+
+            # Apply post_train_transform to each image (decollate causes issues for some metrics)
+            for i in range(outputs.size(0)):
+                outputs[i] = training_objects.post_train_transform(outputs[i])
+
+            loss = training_objects.loss_function(outputs, labels)
+
         training_objects.grad_scaler.scale(loss).backward()
         training_objects.grad_scaler.step(training_objects.optimizer)
         training_objects.grad_scaler.update()
@@ -242,17 +247,21 @@ def validate(
             )
             roi_size = (96, 96)
             sw_batch_size = 4
-            val_outputs = sliding_window_inference(  # type: ignore[assignment]
-                val_images, roi_size, sw_batch_size, training_objects.model
-            )
+            with torch.autocast(training_objects.device.type):
+                val_outputs = sliding_window_inference(  # type: ignore[assignment]
+                    val_images, roi_size, sw_batch_size, training_objects.model
+                )
 
-            if val_outputs is None:
-                raise TypeError("val_outputs is None")
+                if val_outputs is None:
+                    raise TypeError("val_outputs is None")
 
-            for i in range(val_outputs.size(0)):
-                val_outputs[i] = training_objects.post_val_transform(val_outputs[i])
+                # Apply post_train_transform to each image (decollate causes issues for some metrics)
+                for i in range(val_outputs.size(0)):
+                    val_outputs[i] = training_objects.post_val_transform(val_outputs[i])
 
-            epoch_loss += training_objects.loss_function(val_outputs, val_labels).item()
+                epoch_loss += training_objects.loss_function(
+                    val_outputs, val_labels
+                ).item()
 
             # Calculate metrics for this step
             calculate_batch_metrics(
