@@ -182,8 +182,8 @@ class TrainingObjects:
 
     def __post_init__(
         self,
-        training_data: data.ArrayDataset,
-        validation_data: data.ArrayDataset,
+        training_data: data.Dataset,
+        validation_data: data.Dataset,
         training_data_workers: int,
         validation_data_workers: int,
         check_loaders: bool,
