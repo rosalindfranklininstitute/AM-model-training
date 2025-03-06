@@ -282,7 +282,7 @@ def setup_training_objects(
     #     )
     # }
 
-    post_train_transforms = transforms.Compose(
+    post_train_transform = transforms.Compose(
         [
             transforms.EnsureType(),
             transforms.Activations(sigmoid=True),
@@ -294,9 +294,9 @@ def setup_training_objects(
             ),
         ]
     )
-    # post_train_transforms = lambda x: x
+    # post_train_transform = lambda x: x
 
-    post_val_transforms = transforms.Compose(
+    post_val_transform = transforms.Compose(
         [
             transforms.EnsureType(),
             transforms.Activations(sigmoid=True),
@@ -325,8 +325,8 @@ def setup_training_objects(
         grad_scaler=grad_scaler,
         key_train_metrics=key_train_metrics,
         key_val_metrics=key_val_metrics,
-        post_train_transforms=post_train_transforms,
-        post_val_transforms=post_val_transforms,
+        post_train_transform=post_train_transform,
+        post_val_transform=post_val_transform,
         additional_train_metrics=additional_train_metrics,
         additional_val_metrics=additional_val_metrics,
         **kwargs,
