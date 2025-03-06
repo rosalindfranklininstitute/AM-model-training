@@ -81,8 +81,6 @@ def run(
 
     # start a typical PyTorch training
     val_interval: int = 2
-    best_metric: float = -1
-    best_metric_epoch: int = -1
 
     with mlflow.start_run():
         # log model to mlflow
@@ -135,7 +133,7 @@ def run(
                     break
 
         print(
-            f"train completed, best_metric: {best_metric:.4f} at epoch: {best_metric_epoch}"
+            f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
         )
         mlflow.log_param(
             "best_train_metrics", training_parameters.best_metrics["train"]
