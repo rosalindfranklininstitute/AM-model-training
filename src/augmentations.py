@@ -154,6 +154,7 @@ def get_transform_list(
             reader=data.image_reader.PILReader,
             image_only=True,
             ensure_channel_first=True,
+            reverse_indexing=False,  # Use PIL/NumPy indexing of (Y, X) rather than (X, Y)
         ),
         transforms.EnsureTyped([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
         *post_load,
