@@ -8,8 +8,6 @@ import numpy as np
 import torch
 from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import make_grid, draw_segmentation_masks
-from torch.utils.tensorboard import SummaryWriter
-
 import mlflow
 
 from monai.inferers import sliding_window_inference
@@ -86,7 +84,6 @@ def run(
     val_interval: int = 2
     best_metric: float = -1
     best_metric_epoch: int = -1
-    writer = SummaryWriter(log_dir=_TENSORBOARD_LOG_DIR)
 
     with mlflow.start_run():
         # log model to mlflow
@@ -143,7 +140,6 @@ def run(
             "best_train_metrics", training_parameters.best_metrics["train"]
         )
         mlflow.log_param("best_train_metrics", training_parameters.best_metrics["val"])
-        writer.close()
 
 
 def train(
