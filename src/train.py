@@ -136,9 +136,13 @@ def run(
             f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
         )
         mlflow.log_param(
-            "best_train_metrics", training_parameters.best_metrics["train"]
+            "best_train_metrics",
+            training_parameters.best_metrics["train"][training_parameters.best_metric],
         )
-        mlflow.log_param("best_val_metrics", training_parameters.best_metrics["val"])
+        mlflow.log_param(
+            "best_val_metrics",
+            training_parameters.best_metrics["val"][training_parameters.best_metric],
+        )
 
 
 def train(
