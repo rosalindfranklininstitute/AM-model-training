@@ -16,8 +16,6 @@ def weights_to_tensor(weights: Sequence[float], device: DeviceObjType) -> Tensor
 def diceloss(weights: Tensor, **kwargs) -> losses.DiceLoss:
     return losses.DiceLoss(
         include_background=True,
-        sigmoid=True,
-        to_onehot_y=False,
         weight=weights,
     )
 
@@ -25,8 +23,6 @@ def diceloss(weights: Tensor, **kwargs) -> losses.DiceLoss:
 def diceceloss(weights: Tensor, **kwargs) -> losses.DiceCELoss:
     return losses.DiceCELoss(
         include_background=True,
-        sigmoid=True,
-        to_onehot_y=False,
         weight=weights,
     )
 
