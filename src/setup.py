@@ -241,11 +241,11 @@ def setup_training_objects(
     **kwargs: typing.Any,
 ) -> TrainingObjects:
     key_train_metrics = {
-        "train_mean_iou": metrics.MeanIoU(
+        "mean_iou": metrics.MeanIoU(
             include_background=True,
             reduction="mean",
         ),
-        "train_mean_dice": metrics.DiceMetric(
+        "mean_dice": metrics.DiceMetric(
             include_background=True,
             reduction="mean",
         ),
@@ -261,11 +261,11 @@ def setup_training_objects(
     # cm = ignite_metrics.ConfusionMatrix(num_classes, device=device)
     key_val_metrics = {
         # "val_mean_iou": ignite_metrics.mIoU(cm)
-        "val_mean_iou": metrics.MeanIoU(
+        "mean_iou": metrics.MeanIoU(
             include_background=True,
             reduction="mean",
         ),
-        "val_mean_dice": metrics.DiceMetric(
+        "mean_dice": metrics.DiceMetric(
             include_background=True,
             reduction="mean",
         ),
