@@ -159,6 +159,7 @@ class TrainingObjects:
     model: torch.nn.Module
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
+    grad_scaler: torch.GradScaler
     key_train_metrics: dict[str, metrics.Metric]
     key_val_metrics: dict[str, metrics.Metric]
     post_train_transform: transforms.Transform | Callable = lambda x: x
@@ -310,11 +311,19 @@ def setup_training_objects(
 
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    grad_scaler = torch.GradScaler(device=device)
 
     return TrainingObjects(
         training_data,
         validation_data,
+        device=device,
+        model=model,
+        loss_function=loss_function,
+        optimizer=optimizer,
+        grad_scaler=grad_scaler,
+        key_train_metrics=key_train_metrics,
+        key_val_metrics=key_val_metrics,
         post_train_transforms=post_train_transforms,
         post_val_transforms=post_val_transforms,
         additional_train_metrics=additional_train_metrics,
