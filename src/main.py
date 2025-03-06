@@ -28,10 +28,17 @@ def plot_learning_rates(
     iterations: int = 20,
     image_size: int = 1536,
     model_kwargs: dict[str, typing.Any] | None = None,
+    loss_kwargs: dict[str, typing.Any] | None = None,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
         raise FileNotFoundError(csv_path)
+
+    if model_kwargs is None:
+        model_kwargs = {}
+
+    if loss_kwargs is None:
+        loss_kwargs = {}
 
     _logger.info("Starting training with '%s'", csv_path)
 
@@ -57,10 +64,10 @@ def plot_learning_rates(
         "input_image_size": (image_size, image_size),
         **model_kwargs,
     }
-    loss_kwargs: dict[str, typing.Any] = {
-        "weights": losses.weights_to_tensor([1.0, 3.0, 3.0, 5.0, 3.0], device=device),
-        "num_classes": label_count,
-    }
+    loss_kwargs: dict[str, typing.Any] = {"num_classes": label_count, **loss_kwargs}
+
+    if loss_kwargs["weights"] is not None:
+        loss_kwargs["weights"] = losses.weights_to_tensor(loss_kwargs["weights"])
 
     models_to_test = list(models.model_creation_functions.keys())
     if models_to_ignore is not None:
@@ -120,9 +127,13 @@ def run_training(
     image_size: int = 1536,
     frozen_epochs: int = 0,
     model_kwargs: dict[str, typing.Any] | None = None,
+    loss_kwargs: dict[str, typing.Any] | None = None,
 ) -> None:
     if model_kwargs is None:
         model_kwargs = {}
+
+    if loss_kwargs is None:
+        loss_kwargs = {}
 
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
@@ -156,7 +167,6 @@ def run_training(
         num_classes=5,
         input_image_shape=(image_size, image_size),
         learning_rate=learning_rate,
-        loss_weights=(1.0, 3.0, 3.0, 5.0, 3.0),
         best_metric="mean_of_key_metrics",
         key_train_metrics=["mean_iou", "mean_dice"],
         key_val_metrics=["mean_iou", "mean_dice"],
@@ -169,6 +179,7 @@ def run_training(
         training_batch_size=4,
         validation_batch_size=1,
         frozen_epochs=frozen_epochs,
+        loss_weights=loss_kwargs.get("weights", None),
     )
 
     model_kwargs: dict[str, typing.Any] = {
@@ -177,11 +188,11 @@ def run_training(
         **model_kwargs,
     }
     loss_kwargs: dict[str, typing.Any] = {
-        "weights": losses.weights_to_tensor(
-            training_parameters.loss_weights, device=device
-        ),
         "num_classes": training_parameters.num_classes,
+        **loss_kwargs,
     }
+    if loss_kwargs["weights"] is not None:
+        loss_kwargs["weights"] = losses.weights_to_tensor(loss_kwargs["weights"])
 
     model_creator = models.model_creation_functions[model_name]
 
