@@ -203,7 +203,7 @@ class TrainingObjects:
             optimizer=self.optimizer, **lr_scheduler_kwargs
         )
 
-        load_data(
+        self.training_dataloader, self.validation_dataloader = load_data(
             self,
             training_batch_size=training_batch_size,
             validation_batch_size=validation_batch_size,
