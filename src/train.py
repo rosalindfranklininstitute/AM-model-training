@@ -179,6 +179,8 @@ def train(
         training_objects.grad_scaler.step(training_objects.optimizer)
         training_objects.grad_scaler.update()
         training_objects.lr_scheduler.step()
+
+        # Calculate metrics and log progress for this step
         epoch_loss += loss.item()
         epoch_len = (
             training_parameters.total_training_data
@@ -192,6 +194,7 @@ def train(
             metrics_dict=training_objects.train_metrics,
         )
 
+    # Calculate metrics and log progress for this epoch
     epoch_loss /= step
 
     epoch_metrics: dict[str, float] = {}
@@ -251,12 +254,14 @@ def validate(
 
             epoch_loss += training_objects.loss_function(val_outputs, val_labels).item()
 
+            # Calculate metrics for this step
             calculate_batch_metrics(
                 val_outputs,
                 val_labels,
                 metrics_dict=training_objects.val_metrics,
             )
 
+        # Calculate metrics and log progress for this epoch
         epoch_loss /= step
 
         epoch_metrics: dict[str, float] = {}
