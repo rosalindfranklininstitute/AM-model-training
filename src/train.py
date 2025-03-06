@@ -316,12 +316,15 @@ def validate(
 def submit_images_to_mlflow(
     images: torch.Tensor, labels: torch.Tensor, predictions: torch.Tensor, step: int
 ) -> None:
+    colours = ["gray", "blue", "green", "yellow", "red"]
     images = make_grid(images)
     labels = make_grid(labels.to(torch.bool))
     predictions = make_grid(predictions.to(torch.bool))
 
-    labels = to_pil_image(draw_segmentation_masks(images, labels))
-    predictions = to_pil_image(draw_segmentation_masks(images, predictions))
+    labels = to_pil_image(draw_segmentation_masks(images, labels, colors=colours))
+    predictions = to_pil_image(
+        draw_segmentation_masks(images, predictions, colors=colours)
+    )
     images = to_pil_image(images)
 
     mlflow.log_image(
