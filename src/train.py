@@ -102,7 +102,7 @@ def run(
 
         if training_parameters.frozen_epochs > 0:
             # Freeze model if some initial epochs will be frozen
-            for param in training_objects.model.parameters():
+            for param in training_objects.model.encoder.parameters():
                 param.requires_grad = False
 
         for epoch in range(training_parameters.max_epochs):
@@ -112,7 +112,7 @@ def run(
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
                 # Unfreeze (no need if it wasn't frozen)
-                for param in training_objects.model.parameters():
+                for param in training_objects.model.encoder.parameters():
                     param.requires_grad = True
 
             if (epoch + 1) % val_interval == 0:
