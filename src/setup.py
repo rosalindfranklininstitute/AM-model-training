@@ -295,7 +295,7 @@ def setup_training_objects(
     )
     # post_train_transforms = lambda x: x
 
-    val_post_transforms = transforms.Compose(
+    post_val_transforms = transforms.Compose(
         [
             transforms.EnsureType(),
             transforms.Activations(sigmoid=True),
@@ -315,14 +315,8 @@ def setup_training_objects(
     return TrainingObjects(
         training_data,
         validation_data,
-        device,
-        model,
-        loss_function,
-        optimizer,
-        key_train_metrics,
-        key_val_metrics,
-        post_train_transforms,
-        val_post_transforms,
+        post_train_transforms=post_train_transforms,
+        post_val_transforms=post_val_transforms,
         additional_train_metrics=additional_train_metrics,
         additional_val_metrics=additional_val_metrics,
         **kwargs,
