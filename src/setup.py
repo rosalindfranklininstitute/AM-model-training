@@ -10,7 +10,7 @@ import torch
 # from ignite import metrics as ignite_metrics
 
 from monai.utils.misc import first
-from monai import data, transforms, losses, optimizers, metrics
+from monai import data, transforms, losses, optimizers, metrics, inferers
 # from monai.handlers import (
 #     from_engine,
 # )
@@ -36,6 +36,7 @@ def create_datasets(
     validation_split: float = 0.2,
     *,
     label_changes: list[tuple[int, int]] = [],
+    dataset_type: data.Dataset = data.Dataset,
     **transform_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
     if isinstance(input_data, np.ndarray):
@@ -54,7 +55,7 @@ def create_datasets(
     )
 
     return (
-        data.Dataset(
+        dataset_type(
             data=train,
             transform=transforms.Compose(
                 get_transform_list(
@@ -66,7 +67,7 @@ def create_datasets(
                 )
             ),
         ),
-        data.Dataset(
+        dataset_type(
             data=validate,
             transform=transforms.Compose(
                 get_transform_list(
@@ -81,13 +82,19 @@ def create_datasets(
     )
 
 
-def get_device(cpu_only: bool = False) -> torch.device:
-    return torch.device("cuda" if not cpu_only and torch.cuda.is_available() else "cpu")
+def get_device(cpu_only: bool = False, gpu: int | None = None) -> torch.device:
+    gpu_str = "cuda"
+    if gpu is not None:
+        gpu_str += f":{gpu}"
+    return torch.device(
+        gpu_str if not cpu_only and torch.cuda.is_available() else "cpu"
+    )
 
 
 @dataclass
 class TrainingParameters:
     num_classes: int
+    label_names: tuple[str, ...]
     input_image_shape: tuple[int, int]
     learning_rate: float
     best_metric: str
@@ -113,21 +120,19 @@ class TrainingParameters:
     def update_metrics(
         self,
         epoch: int,
-        metrics_dict: dict[str, float],
+        metrics_dict: dict[str, float | NDArray[typing.Any]],
         stage: typing.Literal["train", "val"],
     ) -> bool:
         is_best = False
         metrics_dict["epoch"] = epoch
 
         self.current_metrics[stage] = metrics_dict
-        if (
-            not self.best_metrics[stage]
-            or self.current_metrics[stage][self.best_metric]
-            > self.best_metrics[stage][self.best_metric]
-        ):
+        if not self.best_metrics[stage] or np.mean(
+            self.current_metrics[stage][self.best_metric]
+        ) > np.mean(self.best_metrics[stage][self.best_metric]):
             is_best = True
             _logger.info("New best %s epoch found", stage)
-            self.best_metrics = self.current_metrics
+            self.best_metrics[stage] = self.current_metrics[stage]
 
         logged_metrics = self.current_metrics[stage].copy()
         best_epoch = logged_metrics.pop("epoch")
@@ -137,7 +142,10 @@ class TrainingParameters:
             epoch + 1,
             stage,
             "\n".join(
-                (f"{name}: {value:.4f}" for name, value in logged_metrics.items())
+                (
+                    f"{name}_mean: {np.mean(values):.4f}"
+                    for name, values in logged_metrics.items()
+                )
             ),
             stage,
             self.best_metric,
@@ -162,11 +170,13 @@ class TrainingObjects:
     model: torch.nn.Module
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
-    grad_scaler: torch.GradScaler
     train_metrics: dict[str, metrics.Metric]
     val_metrics: dict[str, metrics.Metric]
+    grad_scaler: torch.GradScaler | None = None
     post_train_transform: transforms.Transform | Callable = lambda x: x
+    post_train_label_transform: transforms.Transform | Callable = lambda x: x
     post_val_transform: transforms.Transform | Callable = lambda x: x
+    post_val_label_transform: transforms.Transform | Callable = lambda x: x
     training_data_workers: InitVar[int] = 8
     validation_data_workers: InitVar[int] = 4
     training_batch_size: InitVar[int] = 4
@@ -181,6 +191,8 @@ class TrainingObjects:
     )
     lr_scheduler: torch._LRScheduler = field(init=False)
     lr_scheduler_kwargs: InitVar[dict[str, typing.Any] | None] = None
+    training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
+    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
 
     def __post_init__(
         self,
@@ -221,49 +233,82 @@ def setup_training_objects(
     model: torch.nn.Module,
     loss_function: losses._Loss,
     learning_rate: float = 1e-4,
+    include_background: bool = False,
     **kwargs: typing.Any,
 ) -> TrainingObjects:
     train_metrics = {
-        "mean_iou": metrics.MeanIoU(
-            include_background=True,
-            reduction="mean",
-        ),
+        # "mean_iou": metrics.MeanIoU(
+        #     include_background=False,
+        #     reduction="mean",
+        # ),
         "mean_dice": metrics.DiceMetric(
-            include_background=True,
-            reduction="mean",
+            include_background=include_background,
+            reduction="mean_batch",
         ),
     }
 
     val_metrics = {
         "mean_iou": metrics.MeanIoU(
-            include_background=True,
-            reduction="mean",
+            include_background=include_background,
+            reduction="mean_batch",
         ),
         "mean_dice": metrics.DiceMetric(
-            include_background=True,
-            reduction="mean",
+            include_background=include_background,
+            reduction="mean_batch",
         ),
     }
 
+    labels_to_keep = tuple(range(1 - int(include_background), num_classes))
+
     post_train_transform = transforms.Compose(
         [
-            transforms.EnsureType(),
-            transforms.Activations(softmax=True),
+            # transforms.Activations(softmax=True),
             transforms.AsDiscrete(
                 argmax=True,
                 to_onehot=num_classes,
+                # dim=1,
+                # keepdim=True,
+                # dtype=torch.long,
             ),
+            transforms.LabelToMask(labels_to_keep),
+            # transforms.EnsureType(dtype=torch.long),
+        ]
+    )
+
+    post_train_label_transform = transforms.Compose(
+        [
+            transforms.AsDiscrete(
+                # argmax=True,
+                to_onehot=num_classes,
+                # dim=1,
+                # keepdim=True,
+                # dtype=torch.long,
+            ),
+            transforms.LabelToMask(labels_to_keep),
+            # transforms.EnsureType(dtype=torch.long),
         ]
     )
 
     post_val_transform = transforms.Compose(
         [
-            transforms.EnsureType(),
-            transforms.Activations(softmax=True),
+            # transforms.Activations(softmax=True),
+            # ArgMax(dim=1),
             transforms.AsDiscrete(
                 argmax=True,
                 to_onehot=num_classes,
             ),
+            transforms.LabelToMask(labels_to_keep),
+        ]
+    )
+
+    post_val_label_transform = transforms.Compose(
+        [
+            # transforms.Activations(softmax=True),
+            transforms.AsDiscrete(
+                # argmax=True,
+                to_onehot=num_classes,
+            ),
+            transforms.LabelToMask(labels_to_keep),
         ]
     )
 
@@ -272,6 +317,10 @@ def setup_training_objects(
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     grad_scaler = torch.GradScaler(device=device)
+    # grad_scaler = None
+
+    training_batch_size = 6
+    validation_batch_size = 3
 
     return TrainingObjects(
         training_data,
@@ -284,7 +333,14 @@ def setup_training_objects(
         train_metrics=train_metrics,
         val_metrics=val_metrics,
         post_train_transform=post_train_transform,
+        post_train_label_transform=post_train_label_transform,
         post_val_transform=post_val_transform,
+        post_val_label_transform=post_val_label_transform,
+        training_batch_size=training_batch_size,
+        validation_batch_size=validation_batch_size,
+        training_data_workers=training_batch_size * 2,
+        validation_data_workers=validation_batch_size * 2,
+        check_loaders=False,
         **kwargs,
     )
 
@@ -316,6 +372,7 @@ def load_data(
         shuffle=True,
         num_workers=training_workers,
         pin_memory=pin_memory,
+        persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
     )
 
     validation_dataloader = data.DataLoader(
@@ -324,6 +381,7 @@ def load_data(
         shuffle=True,
         num_workers=validation_workers,
         pin_memory=pin_memory,
+        persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
     )
     return training_dataloader, validation_dataloader
 

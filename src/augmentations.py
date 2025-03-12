@@ -17,68 +17,48 @@ __all__ = [
 _logger = logging.getLogger("adaptive_milling_training")
 
 
-class TransformLabels(transforms.AsDiscrete):
+class ArgMax(transforms.Transform):
+    def __init__(self, dim: int = 1):
+        self._dim = dim
+
+    def __call__(
+        self, img: NDArray[typing.Any] | torch.Tensor
+    ) -> NDArray[typing.Any] | torch.Tensor:
+        return torch.argmax(img, dim=self._dim, keepdim=True)
+
+
+class ChangeLabels(transforms.Transform):
     """A transform to change/swap/combine label values as part of the transforms, and optionally split them into separate channels via AsDiscrete"""
 
-    def __init__(
-        self, num_labels: int, *label_changes: tuple[int, int], to_onehot: bool = False
-    ) -> None:
-        super().__init__(to_onehot=num_labels if to_onehot else None)
-
+    def __init__(self, *label_changes: tuple[int, int]) -> None:
         self._label_changes = label_changes
 
     def __call__(
         self,
         img: NDArray[typing.Any] | torch.Tensor,
-        argmax: bool | None = None,
-        to_onehot: int | None = None,
-        threshold: float | None = None,
-        rounding: str | None = None,
     ) -> NDArray[typing.Any] | torch.Tensor:
         for old_label, new_label in self._label_changes:
             img[img == old_label] = new_label
-
-        return super().__call__(
-            img,
-            argmax=argmax,
-            to_onehot=to_onehot,
-            threshold=threshold,
-            rounding=rounding,
-        )
+        img += 1  # Add 1 to everything to separate from background
+        return img
 
 
-class TransformLabelsd(TransformLabels, transforms.MapTransform):
+class ChangeLabelsd(ChangeLabels, transforms.MapTransform):
     def __init__(
         self,
         keys: transforms.KeysCollection,
-        num_labels: int,
         *label_changes: tuple[int, int],
-        to_onehot: bool = False,
         allow_missing_keys: bool = False,
     ) -> None:
         transforms.MapTransform.__init__(
             self, keys, allow_missing_keys=allow_missing_keys
         )
-        TransformLabels.__init__(self, num_labels, *label_changes, to_onehot=to_onehot)
+        ChangeLabels.__init__(self, *label_changes)
 
-    def __call__(
-        self,
-        d,
-        argmax: bool | None = None,
-        to_onehot: int | None = None,
-        threshold: float | None = None,
-        rounding: str | None = None,
-    ) -> dict:
+    def __call__(self, d) -> dict:
         ()
         for key in self.key_iterator(d):
-            d[key] = TransformLabels.__call__(
-                self,
-                d[key],
-                argmax=argmax,
-                to_onehot=to_onehot,
-                threshold=threshold,
-                rounding=rounding,
-            )
+            d[key] = ChangeLabels.__call__(self, d[key])
         return d
 
 
@@ -115,12 +95,7 @@ def get_transform_list(
     *,
     label_changes: list[tuple[int, int]] = [],
 ) -> list[transforms.Transform]:
-    post_load: list[transforms.Transform] = [
-        TransformLabelsd(
-            [MONAI_KEYS.LABEL], label_count, *label_changes, to_onehot=True
-        )
-    ]
-
+    post_load: list[transforms.Transform] = []
     post_scale: list[transforms.Transform] = []
 
     if training:
@@ -130,13 +105,13 @@ def get_transform_list(
         )
         post_scale.extend(
             [
-                transforms.RandGaussianNoised([MONAI_KEYS.IMAGE], mean=0.5, prob=0.1),
+                transforms.RandGaussianNoised([MONAI_KEYS.IMAGE], prob=0.5),
                 transforms.RandGridDistortiond(
                     [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]
                 ),  # Small distortions might be good
                 # The SEM image is not perpendicular to the FIB so the Y-axis cannot be flipped
                 transforms.RandFlipd(
-                    [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL], spatial_axis=1
+                    [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL], spatial_axis=1, prob=0.5
                 ),
                 # reduce sensitivity to scale, since we don't have metadata to work with:
                 transforms.RandScaleCropd(
@@ -156,9 +131,13 @@ def get_transform_list(
             ensure_channel_first=True,
             reverse_indexing=False,  # Use PIL/NumPy indexing of (Y, X) rather than (X, Y)
         ),
-        transforms.EnsureTyped([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
         *post_load,
-        transforms.ScaleIntensityd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
+        # transforms.EnsureTyped([MONAI_KEYS.IMAGE]),
+        # Ensure labels are properly formatted
+        ChangeLabelsd(
+            [MONAI_KEYS.LABEL], *label_changes
+        ),  # Potentially swap or merge labels
+        transforms.ScaleIntensityd([MONAI_KEYS.IMAGE]),
         *post_scale,
         transforms.Resized(
             [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
@@ -174,3 +153,5 @@ def get_transform_list(
     ]
 
     return transforms_list
+
+# def get_post_processing_transform_list()

@@ -8,6 +8,18 @@ if typing.TYPE_CHECKING:
     from torch.nn import Module
 
 
+def efficientnet_b4_flexibleunet(
+    label_count: int = 5, pretrained: bool = True, **kwargs: typing.Any
+) -> nets.FlexibleUNet:
+    return nets.FlexibleUNet(
+        in_channels=1,
+        out_channels=label_count,
+        backbone="efficientnet-b4",
+        pretrained=pretrained,
+        spatial_dims=2,
+    )
+
+
 def unet(
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -81,10 +93,12 @@ def segresnetvae(
         spatial_dims=2,
         in_channels=1,
         out_channels=label_count,
+        vae_estimate_std=True,
     )
 
 
 model_creation_functions: dict[str, Callable[..., Module]] = {
+    "efficientnet_b4_flexibleunet": efficientnet_b4_flexibleunet,
     "unet": unet,
     "dynunet": dynunet,
     "segresnet": segresnet,
