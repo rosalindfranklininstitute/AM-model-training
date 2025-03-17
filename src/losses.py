@@ -1,16 +1,64 @@
 from __future__ import annotations
+import warnings
 import typing
 
-from torch import Tensor
+import torch
 from monai import losses
+from monai.networks.utils import one_hot
 
 if typing.TYPE_CHECKING:
-    from torch import DeviceObjType
+    from numpy.typing import NDArray
+    from numpy import float32 as np_float32
+    from torch import DeviceLikeType, Tensor
     from collections.abc import Callable, Sequence
 
 
-def weights_to_tensor(weights: Sequence[float], device: DeviceObjType) -> Tensor:
-    return Tensor(weights).to(device)
+def weights_to_tensor(weights: Sequence[float], device: DeviceLikeType) -> Tensor:
+    return torch.Tensor(weights).to(device)
+
+
+def loss_wrapper(
+    loss_fn: Callable[[Tensor, Tensor], Tensor],
+    include_background: bool = True,
+    to_onehot_y: bool = False,
+    sigmoid: bool = False,
+    softmax: bool = False,
+    other_act: Callable | None = None,
+) -> Callable[[Tensor, Tensor], Tensor]:
+    def wrapped_loss(input: Tensor, target: Tensor, *args, **kwargs):
+        # Adapted from the beginning of DiceLoss.forward to apply it to other loss functions that are missing it
+        if sigmoid:
+            input = torch.sigmoid(input)
+
+        n_pred_ch = input.shape[1]
+        if softmax:
+            if n_pred_ch == 1:
+                warnings.warn("single channel prediction, `softmax=True` ignored.")
+            else:
+                input = torch.softmax(input, 1)
+
+        if other_act is not None:
+            input = other_act(input)
+
+        if to_onehot_y:
+            if n_pred_ch == 1:
+                warnings.warn("single channel prediction, `to_onehot_y=True` ignored.")
+            else:
+                target = one_hot(target, num_classes=n_pred_ch)
+
+        if not include_background:
+            if n_pred_ch == 1:
+                warnings.warn(
+                    "single channel prediction, `include_background=False` ignored."
+                )
+            else:
+                # if skipping background, removing first channel
+                target = target[:, 1:]
+                input = input[:, 1:]
+
+        return loss_fn(input, target, *args, **kwargs)
+
+    return wrapped_loss
 
 
 def diceloss(weights: Tensor, **kwargs) -> losses.DiceLoss:
@@ -28,6 +76,8 @@ def diceceloss(weights: Tensor, **kwargs) -> losses.DiceCELoss:
         to_onehot_y=True,
         softmax=True,
         weight=weights,
+        lambda_dice=0.5,
+        lambda_ce=0.5,
     )
 
 
@@ -38,10 +88,40 @@ def softdicecldiceloss(**kwargs) -> losses.SoftDiceclDiceLoss:
 def naclloss(num_classes: int, **kwargs) -> losses.NACLLoss:
     return losses.NACLLoss(num_classes, dim=2, kernel_size=5)
 
+def generalized_wasserstein_dice_loss(
+    dist_matrix: NDArray[np_float32], weighting_mode: str = "default", **kwargs
+) -> losses.GeneralizedWassersteinDiceLoss:
+    return losses.GeneralizedWassersteinDiceLoss(
+        dist_matrix=dist_matrix,
+        weighting_mode=weighting_mode,
+    )
+
+
+def generalizeddicefocalloss(weights: Tensor, **kwargs):
+    return losses.GeneralizedDiceFocalLoss(
+        include_background=False,
+        to_onehot_y=True,
+        softmax=True,
+        lambda_focal=0.5,
+        lambda_gdl=0.5,
+        weight=weights,
+    )
+
+
+def generalizeddiceloss(**kwargs):
+    return losses.GeneralizedDiceLoss(
+        include_background=False,
+        to_onehot_y=True,
+        softmax=True,
+    )
+
 
 loss_creation_functions: dict[str, Callable[..., losses._Loss]] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
     "softdicecldiceloss": softdicecldiceloss,
     "naclloss": naclloss,
+    "generalized_wasserstein_dice_loss": generalized_wasserstein_dice_loss,
+    "generalizeddicefocalloss": generalizeddicefocalloss,
+    "generalizeddiceloss": generalizeddiceloss,
 }

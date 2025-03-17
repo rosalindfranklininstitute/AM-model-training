@@ -11,6 +11,7 @@ from torch.nn.functional import one_hot
 from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import draw_segmentation_masks
 import mlflow
+
 try:
     from IPython import get_ipython
 
@@ -19,7 +20,8 @@ try:
 except ImportError:
     from tqdm import tqdm
 
-from monai.data import decollate_batch
+from monai.data import decollate_batch, Dataset
+from monai.transforms import Compose
 from monai.utils import set_determinism
 
 from utils import MONAI_KEYS
@@ -109,38 +111,9 @@ def run(
             .numpy(),
         )
 
-        init_params_dict = training_parameters.asdict(include_metrics=False)
-        mlflow.log_params(init_params_dict)
+        mlflow.log_params(training_parameters.asdict(include_metrics=False))
 
-        mlflow.log_param(
-            "pre_train_transforms",
-            tuple(
-                f"{_.__class__.__name__}({_.__dict__})"
-                for _ in training_objects.training_data.transform.transforms
-            ),
-        )
-        mlflow.log_param(
-            "post_train_transforms",
-            tuple(
-                f"{_.__class__.__name__}({_.__dict__})"
-                for _ in training_objects.post_train_transform.transforms
-            ),
-        )
-
-        mlflow.log_param(
-            "pre_val_transforms",
-            tuple(
-                f"{_.__class__.__name__}({_.__dict__})"
-                for _ in training_objects.validation_data.transform.transforms
-            ),
-        )
-        mlflow.log_param(
-            "post_val_transforms",
-            tuple(
-                f"{_.__class__.__name__}({_.__dict__})"
-                for _ in training_objects.post_val_transform.transforms
-            ),
-        )
+        log_training_objects_to_mlflow(training_objects)
 
         if training_parameters.frozen_epochs > 0:
             # Freeze model if some initial epochs will be frozen
@@ -152,6 +125,7 @@ def run(
             desc="Training progress",
             unit="epoch",
             total=training_parameters.max_epochs,
+            initial=1,
         ):
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
@@ -221,9 +195,10 @@ def train(
 
     for step, batch_data in tqdm(
         enumerate(training_objects.training_dataloader, 1),
-        desc=f"Epoch {epoch} training",
+        desc=f"Epoch {epoch + 1} training",
         total=epoch_len,
         unit="step",
+        leave=False,
     ):
         images, labels = (
             batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
@@ -253,16 +228,17 @@ def train(
             loss.backward()
             training_objects.optimizer.step()
 
-        mlflow.log_metrics(
-            {
-                f"learning_rate_{i}": _
-                for i, _ in enumerate(training_objects.lr_scheduler.get_lr())
-            },
-            step=epoch_len * epoch + step,
-        )
+        if training_objects.lr_scheduler is not None:
+            mlflow.log_metrics(
+                {
+                    f"learning_rate_{i}": _
+                    for i, _ in enumerate(training_objects.lr_scheduler.get_last_lr())
+                },
+                step=epoch_len * epoch + step,
+            )
 
-        if not skip_lr_scheduler:
-            training_objects.lr_scheduler.step()
+            if not skip_lr_scheduler:
+                training_objects.lr_scheduler.step()
 
         # Calculate metrics and log progress for this step
         epoch_loss += loss.item()
@@ -298,6 +274,8 @@ def train(
 
     metrics_to_log: dict[str, float] = {}
     for metric_name, values in training_parameters.current_metrics["train"].items():
+        if metric_name == "epoch":
+            continue
         metric_key = f"train_{metric_name}"
         if isinstance(values, np.ndarray):
             for label_name, v in zip(training_parameters.label_names, values):
@@ -330,9 +308,10 @@ def validate(
         outputs: tuple[typing.Any] | None = None
         for step, data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
-            desc=f"Epoch {epoch} validation",
+            desc=f"Epoch {epoch + 1} validation",
             total=epoch_len,
             unit="step",
+            leave=False,
         ):
             images, labels = (
                 data[MONAI_KEYS.IMAGE].to(training_objects.device),
@@ -388,7 +367,7 @@ def validate(
             torch.save(training_objects.model.state_dict(), model_path)
             mlflow.pytorch.log_model(
                 training_objects.model,
-                "model",
+                f"epoch_{epoch + 1}_model",
                 signature=model_signature,
                 pip_requirements=[
                     f"-r {Path(__file__).absolute().parent.parent / 'requirements.txt'}"
@@ -396,18 +375,46 @@ def validate(
             )
             _logger.info(f"Saved new best metric model: {model_path}")
 
-            submit_images_to_mlflow(
-                images,
-                labels,
-                outputs,
-                step=epoch + 1,
-                onehot=None,
-                include_background=True,
-                swap_xy=False,
-            )
+            for step, data in tqdm(
+                enumerate(training_objects.validation_dataloader, 1),
+                desc=f"Submitting epoch {epoch + 1} validation images to MLFlow",
+                total=epoch_len,
+                unit="step",
+                leave=False,
+            ):
+                images, labels = (
+                    data[MONAI_KEYS.IMAGE].to(training_objects.device),
+                    data[MONAI_KEYS.LABEL].to(training_objects.device),
+                )
+                with torch.autocast(training_objects.device.type):
+                    outputs = training_objects.validation_inferer(
+                        images, training_objects.model
+                    )
+
+                outputs = [
+                    training_objects.post_val_transform(_)
+                    for _ in decollate_batch(outputs)
+                ]
+
+                labels = [
+                    training_objects.post_val_label_transform(_)
+                    for _ in decollate_batch(labels)
+                ]
+
+                submit_images_to_mlflow(
+                    images,
+                    labels,
+                    outputs,
+                    step=epoch + 1,
+                    onehot=None,
+                    include_background=True,
+                    swap_xy=False,
+                )
 
     metrics_to_log: dict[str, float] = {}
     for metric_name, values in training_parameters.current_metrics["val"].items():
+        if metric_name == "epoch":
+            continue
         metric_key = f"val_{metric_name}"
         if isinstance(values, np.ndarray):
             for label_name, v in zip(training_parameters.label_names, values):
@@ -450,12 +457,7 @@ def submit_images_to_mlflow(
         labels = labels[:, 1:, :, :]
         predictions = predictions[:, 1:, :, :]
 
-    for img, label, pred in tqdm(
-        zip(images, labels, predictions),
-        desc="Submitting validation images",
-        total=len(images),
-        leave=False,
-    ):
+    for img, label, pred in zip(images, labels, predictions):
         img = img.to("cpu", copy=True)
         label = label.to("cpu", torch.bool, copy=True)
         pred = pred.to("cpu", torch.bool, copy=True)
@@ -495,3 +497,45 @@ def submit_images_to_mlflow(
         )
     mlflow.flush_artifact_async_logging()
     _logger.debug("Submitted images to MLFlow")
+
+
+def log_training_objects_to_mlflow(training_objects: TrainingObjects) -> None:
+    for name, obj in training_objects.asdict().items():
+        if name == "model":
+            continue
+        elif name == "optimizer":
+            mlflow.log_param(
+                name,
+                str(obj),
+            )
+            continue
+        try:
+            if isinstance(obj, Dataset):
+                mlflow.log_param(
+                    f"{name}_transforms",
+                    tuple(
+                        f"{_.__class__.__name__}({_.__dict__})"
+                        for _ in obj.transform.transforms
+                    ),
+                )
+            elif isinstance(obj, Compose):
+                mlflow.log_param(
+                    name,
+                    tuple(
+                        f"{_.__class__.__name__}({dict(((k, v) for k, v in _.__dict__.items() if not k.startswith('_')))})"
+                        for _ in obj.transforms
+                    ),
+                )
+            elif hasattr(obj, "__dict__"):
+                mlflow.log_param(
+                    name,
+                    f"{obj.__class__.__name__}({obj.__dict__})",
+                )
+            else:
+                mlflow.log_param(
+                    name,
+                    str(obj),
+                )
+
+        except Exception:
+            _logger.warning("Failed to log '%s'", name, exc_info=True)

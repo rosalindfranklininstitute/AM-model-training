@@ -166,7 +166,7 @@ class TrainingParameters:
 class TrainingObjects:
     training_data: data.Dataset
     validation_data: data.Dataset
-    device: torch.DeviceObjType
+    device: torch.device
     model: torch.nn.Module
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
@@ -177,22 +177,21 @@ class TrainingObjects:
     post_train_label_transform: transforms.Transform | Callable = lambda x: x
     post_val_transform: transforms.Transform | Callable = lambda x: x
     post_val_label_transform: transforms.Transform | Callable = lambda x: x
+    training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
+    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
+    training_dataloader: data.Dataloader = field(init=False)
+    validation_dataloader: data.Dataloader = field(init=False)
+    lr_scheduler: torch._LRScheduler | None = field(init=False)
+    # InitVars:
     training_data_workers: InitVar[int] = 8
     validation_data_workers: InitVar[int] = 4
     training_batch_size: InitVar[int] = 4
     validation_batch_size: InitVar[int] = 1
-    training_dataloader: data.Dataloader = field(init=False)
-    validation_dataloader: data.Dataloader = field(init=False)
-    num_training_data: int = field(init=False)
-    num_validation_data: int = field(init=False)
     check_loaders: InitVar[bool] = True
-    lr_scheduler_class: InitVar[type[torch._LRScheduler]] = (
+    lr_scheduler_class: InitVar[type[torch._LRScheduler] | None] = (
         optimizers.WarmupCosineSchedule
     )
-    lr_scheduler: torch._LRScheduler = field(init=False)
     lr_scheduler_kwargs: InitVar[dict[str, typing.Any] | None] = None
-    training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
 
     def __post_init__(
         self,
@@ -204,16 +203,15 @@ class TrainingObjects:
         lr_scheduler_class: type[torch._LRScheduler],
         lr_scheduler_kwargs: dict[str, typing.Any] | None,
     ) -> None:
-        self.num_training_data = len(self.training_data)
-
-        self.num_validation_data = len(self.validation_data)
-
         if lr_scheduler_kwargs is None:
             lr_scheduler_kwargs = {}
 
-        self.lr_scheduler = lr_scheduler_class(
-            optimizer=self.optimizer, **lr_scheduler_kwargs
-        )
+        if lr_scheduler_class is None:
+            self.lr_scheduler = None
+        else:
+            self.lr_scheduler = lr_scheduler_class(
+                optimizer=self.optimizer, **lr_scheduler_kwargs
+            )
 
         self.training_dataloader, self.validation_dataloader = load_data(
             self,
@@ -224,9 +222,12 @@ class TrainingObjects:
             validation_workers=validation_data_workers,
         )
 
+    def asdict(self) -> dict[str, typing.Any]:
+        return asdict(self)
+
 
 def setup_training_objects(
-    device: torch.DeviceObjType,
+    device: torch.device,
     training_data: data.Dataset,
     validation_data: data.Dataset,
     num_classes: int,
@@ -237,10 +238,10 @@ def setup_training_objects(
     **kwargs: typing.Any,
 ) -> TrainingObjects:
     train_metrics = {
-        # "mean_iou": metrics.MeanIoU(
-        #     include_background=False,
-        #     reduction="mean",
-        # ),
+        "mean_iou": metrics.MeanIoU(
+            include_background=include_background,
+            reduction="mean",
+        ),
         "mean_dice": metrics.DiceMetric(
             include_background=include_background,
             reduction="mean_batch",
@@ -389,9 +390,10 @@ def load_data(
 def find_learning_rate(
     ax: Axes,
     training_objects: TrainingObjects,
-    lower_learning_rate: float = 1e-6,
+    lower_learning_rate: float = 1e-7,
     upper_learning_rate: float = 1e-2,
     iterations: int = 20,
+    amp: bool = True,
 ) -> None:
     lr_finder = optimizers.LearningRateFinder(
         model=training_objects.model,
@@ -405,6 +407,7 @@ def find_learning_rate(
         start_lr=lower_learning_rate,
         end_lr=upper_learning_rate,
         num_iter=iterations,
+        amp=amp,
     )
     # for grad, loss in zip(*lr_finder.get_lrs_and_losses())
     #     print(f"Gradient, loss: {grad}, {loss}")
