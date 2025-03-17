@@ -21,7 +21,7 @@ from utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from matplotlib.axes import Axes
     from numpy.typing import NDArray
 
@@ -34,6 +34,7 @@ def create_datasets(
     image_size: int,
     label_count: int,
     validation_split: float = 0.2,
+    foreground_labels: Sequence[int] | None = None,
     *,
     label_changes: list[tuple[int, int]] = [],
     dataset_type: data.Dataset = data.Dataset,
@@ -63,6 +64,7 @@ def create_datasets(
                     label_count=label_count,
                     training=True,
                     label_changes=label_changes,
+                    foreground_labels=foreground_labels,
                     **transform_kwargs,
                 )
             ),
@@ -109,6 +111,7 @@ class TrainingParameters:
     key_train_metrics: list[str]
     key_val_metrics: list[str]
     frozen_epochs: int = 0
+    foreground_labels: tuple[int, ...] = field(default_factory=tuple)
     loss_weights: tuple[float, ...] | None = None
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
