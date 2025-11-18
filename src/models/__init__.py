@@ -1,15 +1,16 @@
 from __future__ import annotations
 import typing
 
+import segmentation_models_pytorch as smp
 from monai.networks import nets
 
 if typing.TYPE_CHECKING:
     from collections.abc import Callable
-    from torch.nn import Module
+    import torch
 
 
 def efficientnet_b4_flexibleunet(
-    label_count: int = 5, pretrained: bool = True, **kwargs: typing.Any
+    label_count: int = 5, pretrained: bool = False, **kwargs: typing.Any
 ) -> nets.FlexibleUNet:
     return nets.FlexibleUNet(
         in_channels=1,
@@ -17,6 +18,36 @@ def efficientnet_b4_flexibleunet(
         backbone="efficientnet-b4",
         pretrained=pretrained,
         spatial_dims=2,
+    )
+
+
+def smp_efficientnet_b4_unet(
+    label_count: int = 5,
+    encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
+    **kwargs: typing.Any,
+) -> smp.UNet:
+    return smp.Unet(
+        encoder_name="efficientnet-b4",
+        encoder_weights=encoder_weights,
+        classes=label_count,
+        activation=None,
+        decoder_attention_type="scse",
+        in_channels=1,
+    )
+
+
+def smp_efficientnet_b4_unetplusplus(
+    label_count: int = 5,
+    encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
+    **kwargs: typing.Any,
+) -> smp.UNetPlusPlus:
+    return smp.UnetPlusPlus(
+        encoder_name="efficientnet-b4",
+        encoder_weights=encoder_weights,
+        classes=label_count,
+        activation=None,
+        decoder_attention_type="scse",
+        in_channels=1,
     )
 
 
@@ -97,7 +128,21 @@ def segresnetvae(
     )
 
 
-model_creation_functions: dict[str, Callable[..., Module]] = {
+def fpn(
+    label_count: int = 5,
+    **kwargs: typing.Any,
+) -> smp.FPN:
+    return smp.FPN(
+        encoder_name="efficientnet-b6",
+        encoder_weights=None,
+        in_channels=1,
+        classes=label_count,
+        activation=None,
+        decoder_attention_type="scse",
+    )
+
+
+model_creation_functions: dict[str, Callable[..., torch.nn.Module]] = {
     "efficientnet_b4_flexibleunet": efficientnet_b4_flexibleunet,
     "unet": unet,
     "dynunet": dynunet,
@@ -105,4 +150,7 @@ model_creation_functions: dict[str, Callable[..., Module]] = {
     "segresnetds": segresnetds,
     "segresnetds2": segresnetds2,
     "segresnetvae": segresnetvae,
+    "smp_efficientnet_b4_unet": smp_efficientnet_b4_unet,
+    "smp_efficientnet_b4_unetplusplus": smp_efficientnet_b4_unetplusplus,
+    "fpn": fpn,
 }
