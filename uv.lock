@@ -221,9 +221,25 @@ cu128 = [
     { name = "torchvision", version = "0.23.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" } },
 ]
 dev = [
+    { name = "lxml-stubs" },
     { name = "microsoft-python-type-stubs" },
     { name = "mypy" },
     { name = "ruff" },
+    { name = "types-cffi" },
+    { name = "types-defusedxml" },
+    { name = "types-openpyxl" },
+    { name = "types-paramiko" },
+    { name = "types-psutil" },
+    { name = "types-pycocotools" },
+    { name = "types-pygments" },
+    { name = "types-pysftp" },
+    { name = "types-pysocks" },
+    { name = "types-pywin32" },
+    { name = "types-simplejson" },
+    { name = "types-tabulate" },
+    { name = "types-tensorflow" },
+    { name = "types-ujson" },
+    { name = "types-xlrd" },
 ]
 scripts = [
     { name = "ipywidgets" },
@@ -234,6 +250,7 @@ scripts = [
 requires-dist = [
     { name = "ipywidgets", marker = "extra == 'scripts'" },
     { name = "jupyter", marker = "extra == 'scripts'" },
+    { name = "lxml-stubs", marker = "extra == 'dev'" },
     { name = "microsoft-python-type-stubs", marker = "extra == 'dev'", git = "https://github.com/microsoft/python-type-stubs.git" },
     { name = "monai", extras = ["ignite", "itk", "matplotlib", "mlflow", "pandas", "pillow", "scipy", "tensorboard", "tifffile", "tqdm"] },
     { name = "mypy", marker = "extra == 'dev'" },
@@ -251,6 +268,21 @@ requires-dist = [
     { name = "torchvision", marker = "extra == 'cu118'", specifier = ">=0.22.0", index = "https://download.pytorch.org/whl/cu118", conflict = { package = "ap-model-traning", extra = "cu118" } },
     { name = "torchvision", marker = "extra == 'cu126'", specifier = ">=0.22.0", index = "https://download.pytorch.org/whl/cu126", conflict = { package = "ap-model-traning", extra = "cu126" } },
     { name = "torchvision", marker = "extra == 'cu128'", specifier = ">=0.22.0", index = "https://download.pytorch.org/whl/cu128", conflict = { package = "ap-model-traning", extra = "cu128" } },
+    { name = "types-cffi", marker = "extra == 'dev'" },
+    { name = "types-defusedxml", marker = "extra == 'dev'" },
+    { name = "types-openpyxl", marker = "extra == 'dev'" },
+    { name = "types-paramiko", marker = "extra == 'dev'" },
+    { name = "types-psutil", marker = "extra == 'dev'" },
+    { name = "types-pycocotools", marker = "extra == 'dev'" },
+    { name = "types-pygments", marker = "extra == 'dev'" },
+    { name = "types-pysftp", marker = "extra == 'dev'" },
+    { name = "types-pysocks", marker = "extra == 'dev'" },
+    { name = "types-pywin32", marker = "extra == 'dev'" },
+    { name = "types-simplejson", marker = "extra == 'dev'" },
+    { name = "types-tabulate", marker = "extra == 'dev'" },
+    { name = "types-tensorflow", marker = "extra == 'dev'" },
+    { name = "types-ujson", marker = "extra == 'dev'" },
+    { name = "types-xlrd", marker = "extra == 'dev'" },
 ]
 provides-extras = ["dev", "scripts", "cpu", "cu113", "cu118", "cu126", "cu128"]
 
@@ -1065,8 +1097,8 @@ name = "cryptography"
 version = "46.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "(python_full_version >= '3.10' and platform_python_implementation != 'PyPy') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (python_full_version < '3.10' and extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
-    { name = "typing-extensions", marker = "python_full_version == '3.10.*' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/33/c00162f49c0e2fe8064a62cb92b93e50c74a72bc370ab92f86112b33ff62/cryptography-46.0.3.tar.gz", hash = "sha256:a8b17438104fed022ce745b362294d9ce35b4c2e45c1d958ad4a4b019285f4a1", size = 749258, upload-time = "2025-10-15T23:18:31.74Z" }
 wheels = [
@@ -2912,6 +2944,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/da/34/28fff3ab31ccff1fd4f6c7c7b0ceb2b6968d8ea4950663eadcb5720591a0/lark-1.3.1.tar.gz", hash = "sha256:b426a7a6d6d53189d318f2b6236ab5d6429eaf09259f1ca33eb716eed10d2905", size = 382732, upload-time = "2025-10-27T18:25:56.653Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/3d/14ce75ef66813643812f3093ab17e46d3a206942ce7376d31ec2d36229e7/lark-1.3.1-py3-none-any.whl", hash = "sha256:c629b661023a014c37da873b4ff58a817398d12635d3bbb2c5a03be7fe5d1e12", size = 113151, upload-time = "2025-10-27T18:25:54.882Z" },
+]
+
+[[package]]
+name = "lxml-stubs"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/da/1a3a3e5d159b249fc2970d73437496b908de8e4716a089c69591b4ffa6fd/lxml-stubs-0.5.1.tar.gz", hash = "sha256:e0ec2aa1ce92d91278b719091ce4515c12adc1d564359dfaf81efa7d4feab79d", size = 14778, upload-time = "2024-01-10T09:37:46.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/c9/e0f8e4e6e8a69e5959b06499582dca6349db6769cc7fdfb8a02a7c75a9ae/lxml_stubs-0.5.1-py3-none-any.whl", hash = "sha256:1f689e5dbc4b9247cb09ae820c7d34daeb1fdbd1db06123814b856dae7787272", size = 13584, upload-time = "2024-01-10T09:37:44.931Z" },
 ]
 
 [[package]]
@@ -7780,6 +7821,204 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/45/81b94a52caed434b94da65729c03ad0fb7665fab0f7db9ee54c94e541403/typer_slim-0.20.0.tar.gz", hash = "sha256:9fc6607b3c6c20f5c33ea9590cbeb17848667c51feee27d9e314a579ab07d1a3", size = 106561, upload-time = "2025-10-20T17:03:46.642Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/dd/5cbf31f402f1cc0ab087c94d4669cfa55bd1e818688b910631e131d74e75/typer_slim-0.20.0-py3-none-any.whl", hash = "sha256:f42a9b7571a12b97dddf364745d29f12221865acef7a2680065f9bb29c7dc89d", size = 47087, upload-time = "2025-10-20T17:03:44.546Z" },
+]
+
+[[package]]
+name = "types-cffi"
+version = "1.17.0.20250915"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2a/98/ea454cea03e5f351323af6a482c65924f3c26c515efd9090dede58f2b4b6/types_cffi-1.17.0.20250915.tar.gz", hash = "sha256:4362e20368f78dabd5c56bca8004752cc890e07a71605d9e0d9e069dbaac8c06", size = 17229, upload-time = "2025-09-15T03:01:25.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/ec/092f2b74b49ec4855cdb53050deb9699f7105b8fda6fe034c0781b8687f3/types_cffi-1.17.0.20250915-py3-none-any.whl", hash = "sha256:cef4af1116c83359c11bb4269283c50f0688e9fc1d7f0eeb390f3661546da52c", size = 20112, upload-time = "2025-09-15T03:01:24.187Z" },
+]
+
+[[package]]
+name = "types-defusedxml"
+version = "0.7.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/4a/5b997ae87bf301d1796f72637baa4e0e10d7db17704a8a71878a9f77f0c0/types_defusedxml-0.7.0.20250822.tar.gz", hash = "sha256:ba6c395105f800c973bba8a25e41b215483e55ec79c8ca82b6fe90ba0bc3f8b2", size = 10590, upload-time = "2025-08-22T03:02:59.547Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/73/8a36998cee9d7c9702ed64a31f0866c7f192ecffc22771d44dbcc7878f18/types_defusedxml-0.7.0.20250822-py3-none-any.whl", hash = "sha256:5ee219f8a9a79c184773599ad216123aedc62a969533ec36737ec98601f20dcf", size = 13430, upload-time = "2025-08-22T03:02:58.466Z" },
+]
+
+[[package]]
+name = "types-docutils"
+version = "0.22.3.20251115"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/d7/576ec24bf61a280f571e1f22284793adc321610b9bcfba1bf468cf7b334f/types_docutils-0.22.3.20251115.tar.gz", hash = "sha256:0f79ea6a7bd4d12d56c9f824a0090ffae0ea4204203eb0006392906850913e16", size = 56828, upload-time = "2025-11-15T02:59:57.371Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/01/61ac9eb38f1f978b47443dc6fd2e0a3b0f647c2da741ddad30771f1b2b6f/types_docutils-0.22.3.20251115-py3-none-any.whl", hash = "sha256:c6e53715b65395d00a75a3a8a74e352c669bc63959e65a207dffaa22f4a2ad6e", size = 91951, upload-time = "2025-11-15T02:59:56.413Z" },
+]
+
+[[package]]
+name = "types-openpyxl"
+version = "3.1.5.20250919"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/12/8bc4a25d49f1e4b7bbca868daa3ee80b1983d8137b4986867b5b65ab2ecd/types_openpyxl-3.1.5.20250919.tar.gz", hash = "sha256:232b5906773eebace1509b8994cdadda043f692cfdba9bfbb86ca921d54d32d7", size = 100880, upload-time = "2025-09-19T02:54:39.997Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/3c/d49cf3f4489a10e9ddefde18fd258f120754c5825d06d145d9a0aaac770b/types_openpyxl-3.1.5.20250919-py3-none-any.whl", hash = "sha256:bd06f18b12fd5e1c9f0b666ee6151d8140216afa7496f7ebb9fe9d33a1a3ce99", size = 166078, upload-time = "2025-09-19T02:54:38.657Z" },
+]
+
+[[package]]
+name = "types-paramiko"
+version = "4.0.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b7/b8/c6ff3b10c2f7b9897650af746f0dc6c5cddf054db857bc79d621f53c7d22/types_paramiko-4.0.0.20250822.tar.gz", hash = "sha256:1b56b0cbd3eec3d2fd123c9eb2704e612b777e15a17705a804279ea6525e0c53", size = 28730, upload-time = "2025-08-22T03:03:43.262Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/a1/b3774ed924a66ee2c041224d89c36f0c21f4f6cf75036d6ee7698bf8a4b9/types_paramiko-4.0.0.20250822-py3-none-any.whl", hash = "sha256:55bdb14db75ca89039725ec64ae3fa26b8d57b6991cfb476212fa8f83a59753c", size = 38833, upload-time = "2025-08-22T03:03:42.072Z" },
+]
+
+[[package]]
+name = "types-protobuf"
+version = "6.32.1.20251105"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/ab/0dce6a9841b5ebf3e37401879bb8cc20724ad9c770a7649bee997696cc75/types_protobuf-6.32.1.20251105.tar.gz", hash = "sha256:641002611ff87dd9fedc38a39a29cacb9907ae5ce61489b53e99ca2074bef764", size = 63846, upload-time = "2025-11-05T03:04:43.456Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/57/3a0d89b33b7485b7ffd99ec7cf53b0c5c89194c481f0bd673fd67e5f273f/types_protobuf-6.32.1.20251105-py3-none-any.whl", hash = "sha256:a15109d38f7cfefd2539ef86d3f93a6a41c7cad53924f8aa1a51eaddbb72a660", size = 77890, upload-time = "2025-11-05T03:04:42.067Z" },
+]
+
+[[package]]
+name = "types-psutil"
+version = "7.0.0.20251116"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/ec/c1e9308b91582cad1d7e7d3007fd003ef45a62c2500f8219313df5fc3bba/types_psutil-7.0.0.20251116.tar.gz", hash = "sha256:92b5c78962e55ce1ed7b0189901a4409ece36ab9fd50c3029cca7e681c606c8a", size = 22192, upload-time = "2025-11-16T03:10:32.859Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/0e/11ba08a5375c21039ed5f8e6bba41e9452fb69f0e2f7ee05ed5cca2a2cdf/types_psutil-7.0.0.20251116-py3-none-any.whl", hash = "sha256:74c052de077c2024b85cd435e2cba971165fe92a5eace79cbeb821e776dbc047", size = 25376, upload-time = "2025-11-16T03:10:31.813Z" },
+]
+
+[[package]]
+name = "types-pycocotools"
+version = "2.0.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/5c/1fbd49622736571be9b7bdf2a0571fe518a36f3a9daa25eb598b0138a266/types_pycocotools-2.0.0.20250822.tar.gz", hash = "sha256:dcb2633bbf9b794e4513ee15c99fefc5d9806d26d5c269d3074a8b52253fa44f", size = 9403, upload-time = "2025-08-22T03:03:46.772Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/99/4086af234127767d36e4df3afd106d162000d86ee674c17a7eda99360334/types_pycocotools-2.0.0.20250822-py3-none-any.whl", hash = "sha256:5dac1f639c7fcc5ff2e83ad2abb0b369632b21468de5014ae3da1af2d6af2026", size = 9863, upload-time = "2025-08-22T03:03:45.956Z" },
+]
+
+[[package]]
+name = "types-pygments"
+version = "2.19.0.20250809"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-docutils" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/1b/a6317763a8f2de01c425644273e5fbe3145d648a081f3bad590b3c34e000/types_pygments-2.19.0.20250809.tar.gz", hash = "sha256:01366fd93ef73c792e6ee16498d3abf7a184f1624b50b77f9506a47ed85974c2", size = 18454, upload-time = "2025-08-09T03:17:14.322Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/c4/d9f0923a941159664d664a0b714242fbbd745046db2d6c8de6fe1859c572/types_pygments-2.19.0.20250809-py3-none-any.whl", hash = "sha256:8e813e5fc25f741b81cadc1e181d402ebd288e34a9812862ddffee2f2b57db7c", size = 25407, upload-time = "2025-08-09T03:17:13.223Z" },
+]
+
+[[package]]
+name = "types-pysftp"
+version = "0.2.17.20250805"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-paramiko" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8e/4f/0b35f989d3ae5003c08f300b35900b99c8a8f1adafa0c29d6d51fd61eadf/types_pysftp-0.2.17.20250805.tar.gz", hash = "sha256:9eb83d332cb50a4bf76689e29240b20ea83055fabb9590fc6b5a739976166f9a", size = 9562, upload-time = "2025-08-05T03:30:15.068Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/c7/9efca3bce3dc92edd06fa1f6b983980798a34905a6cf2172213fa203a28a/types_pysftp-0.2.17.20250805-py3-none-any.whl", hash = "sha256:1d1615c4d94842a6678c3febb073db348291e3c0841760b5867b043bcf64f071", size = 9412, upload-time = "2025-08-05T03:30:14.128Z" },
+]
+
+[[package]]
+name = "types-pysocks"
+version = "1.7.1.20251001"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/d7/421deaee04ffe69dc1449cbf57dc4d4d92e8f966f4a35b482ea3811b7980/types_pysocks-1.7.1.20251001.tar.gz", hash = "sha256:50a0e737d42527abbec09e891c64f76a9f66f302e673cd149bc112c15764869f", size = 8785, upload-time = "2025-10-01T03:04:13.85Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/07/6a8aafa0fa5fc0880a37c98b41348bf91bc28f76577bdac68f78bcf8a124/types_pysocks-1.7.1.20251001-py3-none-any.whl", hash = "sha256:dd9abcfc7747aeddf1bab270c8daab3a1309c3af9e07c8c2c52038ab8539f06c", size = 9620, upload-time = "2025-10-01T03:04:13.042Z" },
+]
+
+[[package]]
+name = "types-pywin32"
+version = "311.0.0.20251008"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/05/cd94300066241a7abb52238f0dd8d7f4fe1877cf2c72bd1860856604d962/types_pywin32-311.0.0.20251008.tar.gz", hash = "sha256:d6d4faf8e0d7fdc0e0a1ff297b80be07d6d18510f102d793bf54e9e3e86f6d06", size = 329561, upload-time = "2025-10-08T02:51:39.436Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/08/00a38e6b71585e6741d5b3b4cc9dd165cf549b6f1ed78815c6585f8b1b58/types_pywin32-311.0.0.20251008-py3-none-any.whl", hash = "sha256:775e1046e0bad6d29ca47501301cce67002f6661b9cebbeca93f9c388c53fab4", size = 392942, upload-time = "2025-10-08T02:51:38.327Z" },
+]
+
+[[package]]
+name = "types-requests"
+version = "2.32.4.20250913"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/36/27/489922f4505975b11de2b5ad07b4fe1dca0bca9be81a703f26c5f3acfce5/types_requests-2.32.4.20250913.tar.gz", hash = "sha256:abd6d4f9ce3a9383f269775a9835a4c24e5cd6b9f647d64f88aa4613c33def5d", size = 23113, upload-time = "2025-09-13T02:40:02.309Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/20/9a227ea57c1285986c4cf78400d0a91615d25b24e257fd9e2969606bdfae/types_requests-2.32.4.20250913-py3-none-any.whl", hash = "sha256:78c9c1fffebbe0fa487a418e0fa5252017e9c60d1a2da394077f1780f655d7e1", size = 20658, upload-time = "2025-09-13T02:40:01.115Z" },
+]
+
+[[package]]
+name = "types-setuptools"
+version = "80.9.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/bd/1e5f949b7cb740c9f0feaac430e301b8f1c5f11a81e26324299ea671a237/types_setuptools-80.9.0.20250822.tar.gz", hash = "sha256:070ea7716968ec67a84c7f7768d9952ff24d28b65b6594797a464f1b3066f965", size = 41296, upload-time = "2025-08-22T03:02:08.771Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/2d/475bf15c1cdc172e7a0d665b6e373ebfb1e9bf734d3f2f543d668b07a142/types_setuptools-80.9.0.20250822-py3-none-any.whl", hash = "sha256:53bf881cb9d7e46ed12c76ef76c0aaf28cfe6211d3fab12e0b83620b1a8642c3", size = 63179, upload-time = "2025-08-22T03:02:07.643Z" },
+]
+
+[[package]]
+name = "types-simplejson"
+version = "3.20.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/6b/96d43a90cd202bd552cdd871858a11c138fe5ef11aeb4ed8e8dc51389257/types_simplejson-3.20.0.20250822.tar.gz", hash = "sha256:2b0bfd57a6beed3b932fd2c3c7f8e2f48a7df3978c9bba43023a32b3741a95b0", size = 10608, upload-time = "2025-08-22T03:03:35.36Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3c/9f/8e2c9e6aee9a2ff34f2ffce6ccd9c26edeef6dfd366fde611dc2e2c00ab9/types_simplejson-3.20.0.20250822-py3-none-any.whl", hash = "sha256:b5e63ae220ac7a1b0bb9af43b9cb8652237c947981b2708b0c776d3b5d8fa169", size = 10417, upload-time = "2025-08-22T03:03:34.485Z" },
+]
+
+[[package]]
+name = "types-tabulate"
+version = "0.9.0.20241207"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/43/16030404a327e4ff8c692f2273854019ed36718667b2993609dc37d14dd4/types_tabulate-0.9.0.20241207.tar.gz", hash = "sha256:ac1ac174750c0a385dfd248edc6279fa328aaf4ea317915ab879a2ec47833230", size = 8195, upload-time = "2024-12-07T02:54:42.554Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/86/a9ebfd509cbe74471106dffed320e208c72537f9aeb0a55eaa6b1b5e4d17/types_tabulate-0.9.0.20241207-py3-none-any.whl", hash = "sha256:b8dad1343c2a8ba5861c5441370c3e35908edd234ff036d4298708a1d4cf8a85", size = 8307, upload-time = "2024-12-07T02:54:41.031Z" },
+]
+
+[[package]]
+name = "types-tensorflow"
+version = "2.18.0.20251008"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "types-protobuf" },
+    { name = "types-requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/0a/13bde03fb5a23faaadcca2d6914f865e444334133902310ea05e6ade780c/types_tensorflow-2.18.0.20251008.tar.gz", hash = "sha256:8db03d4dd391a362e2ea796ffdbccb03c082127606d4d852edb7ed9504745933", size = 257550, upload-time = "2025-10-08T02:51:51.104Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/cc/e50e49db621b0cf03c1f3d10be47389de41a02dc9924c3a83a9c1a55bf28/types_tensorflow-2.18.0.20251008-py3-none-any.whl", hash = "sha256:d6b0dd4d81ac6d9c5af803ebcc8ce0f65c5850c063e8b9789dc828898944b5f4", size = 329023, upload-time = "2025-10-08T02:51:50.024Z" },
+]
+
+[[package]]
+name = "types-ujson"
+version = "5.10.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/bd/d372d44534f84864a96c19a7059d9b4d29db8541828b8b9dc3040f7a46d0/types_ujson-5.10.0.20250822.tar.gz", hash = "sha256:0a795558e1f78532373cf3f03f35b1f08bc60d52d924187b97995ee3597ba006", size = 8437, upload-time = "2025-08-22T03:02:19.433Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/f2/d812543c350674d8b3f6e17c8922248ee3bb752c2a76f64beb8c538b40cf/types_ujson-5.10.0.20250822-py3-none-any.whl", hash = "sha256:3e9e73a6dc62ccc03449d9ac2c580cd1b7a8e4873220db498f7dd056754be080", size = 7657, upload-time = "2025-08-22T03:02:18.699Z" },
+]
+
+[[package]]
+name = "types-xlrd"
+version = "2.0.0.20251020"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/85/14d85dd29c0c3440744ddc395c7e5527dae9f1e1f2ec4bd2e545dfde7c7b/types_xlrd-2.0.0.20251020.tar.gz", hash = "sha256:f219d90d62b6b41928e18c4bcae464903d15947ed1b488e3b88e3b1f34465c9e", size = 13962, upload-time = "2025-10-20T03:07:45.78Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/98/460831d93f4184517032d3b5ebdf19803a787efa58b2fbb5f6162d6dd120/types_xlrd-2.0.0.20251020-py3-none-any.whl", hash = "sha256:154da87c514ccb66d7291c9bcd72fb5cbfcf74d517a5a68df1c9e381a842556d", size = 16883, upload-time = "2025-10-20T03:07:44.77Z" },
 ]
 
 [[package]]
