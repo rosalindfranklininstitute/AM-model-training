@@ -473,7 +473,7 @@ class ToRGBTransformd(transforms.transform.MapTransform):
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         for key in self.key_iterator(d):
-            d[key] = self._transform(d[key], mask=key == MONAI_KEYS.LABEL)
+            d[key] = self._transform(d[key])
         return d
 
     def _transform(self, image: torch.Tensor) -> torch.Tensor:
