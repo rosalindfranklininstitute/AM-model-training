@@ -1,15 +1,31 @@
 from __future__ import annotations
+import math
 import logging
 import typing
 
 import torch
-from numpy import deg2rad
+import numpy as np
+from torchvision.transforms.v2 import (
+    functional as functional_transforms,
+    InterpolationMode,
+)
 from monai import data, transforms
+from monai.transforms.io.dictionary import LoadImaged
+from monai.transforms.spatial.dictionary import RandAffined, Rand2DElasticd
+from monai.transforms.intensity.dictionary import (
+    RandGaussianSmoothd,
+    RandGaussianSharpend,
+)
+from monai.utils.type_conversion import convert_to_tensor
+from monai.data.meta_obj import get_track_meta
+from monai.transforms.compose import Compose
 from utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
-    from collections.abc import Sequence, Callable, Mapping, Hashable
+    from collections.abc import Sequence, Callable, Mapping, Hashable, Collection
+
+    KeysCollection = typing.Union[Collection[Hashable], Hashable]
 
 __all__ = [
     "get_transform_list",
@@ -50,7 +66,7 @@ class ChangeLabels(transforms.Transform):
 class ChangeLabelsd(ChangeLabels, transforms.MapTransform):
     def __init__(
         self,
-        keys: transforms.KeysCollection,
+        keys: KeysCollection,
         *label_changes: tuple[int, int],
         background_mask_key: str | None = None,
         allow_missing_keys: bool = False,
@@ -98,7 +114,7 @@ class RandScaleSquareCrop(transforms.RandScaleCrop):
 class ClassesToIndicesd(transforms.ClassesToIndicesd):
     def __init__(
         self,
-        keys: transforms.KeysCollection,
+        keys: KeysCollection,
         indices_postfix: str = "_cls_indices",
         num_classes: int | None = None,
         image_key: str | None = None,
@@ -156,7 +172,7 @@ class ClassesToIndicesd(transforms.ClassesToIndicesd):
 class LabelToMaskd(transforms.LabelToMaskd):
     def __init__(  # pytype: disable=annotation-type-mismatch
         self,
-        keys: transforms.KeysCollection,
+        keys: KeysCollection,
         select_labels: Sequence[int] | int,
         merge_channels: bool = False,
         allow_missing_keys: bool = False,
@@ -177,7 +193,6 @@ class LabelToMaskd(transforms.LabelToMaskd):
 
 def get_transform_list(
     image_size: int,
-    label_count: int,
     training: bool = False,
     foreground_labels: Sequence[int] | int | None = None,
     *,
@@ -198,6 +213,10 @@ def get_transform_list(
 
         post_load.extend(
             [
+                transforms.RandAdjustContrastd(
+                    MONAI_KEYS.IMAGE, gamma=(0.5, 2), prob=0.5, retain_stats=True
+                ),
+                transforms.RandHistogramShiftd(MONAI_KEYS.IMAGE),
                 LabelToMaskd(
                     MONAI_KEYS.LABEL,
                     select_labels=foreground_labels,
@@ -219,7 +238,7 @@ def get_transform_list(
                 transforms.RandAffined(
                     [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL, label_mask_key],
                     scale_range=(0.0, 0.5),
-                    prob=0.8,
+                    prob=0.5,
                     padding_mode="zeros",
                 ),
                 # transforms.FgBgToIndicesd(label_mask_key),
@@ -233,12 +252,11 @@ def get_transform_list(
                 ),
                 transforms.RandAffined(
                     [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
-                    rotate_range=deg2rad(2),
+                    rotate_range=math.radians(2),
                     prob=0.5,
                     padding_mode="zeros",
                 ),
-                transforms.RandAdjustContrastd([MONAI_KEYS.IMAGE], gamma=(0.5, 2)),
-                transforms.RandGaussianNoised([MONAI_KEYS.IMAGE], prob=0.5),
+                transforms.RandGaussianNoised([MONAI_KEYS.IMAGE], prob=0.25),
                 transforms.RandFlipd(
                     [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
                     spatial_axis=int(use_numpy_indexing),
@@ -272,7 +290,7 @@ def get_transform_list(
         *post_load,
         # transforms.EnsureTyped([MONAI_KEYS.IMAGE]),
         # Ensure labels are properly formatted
-        transforms.ScaleIntensityd([MONAI_KEYS.IMAGE]),
+        transforms.NormalizeIntensityd([MONAI_KEYS.IMAGE]),
         ChangeLabelsd(
             [MONAI_KEYS.LABEL], *label_changes
         ),  # Potentially swap or merge labels
@@ -293,4 +311,178 @@ def get_transform_list(
     return transforms_list
 
 
-# def get_post_processing_transform_list()
+def get_transforms(
+    image_size: int,
+    augmentations: bool,
+    rgb: bool = True,
+    pad: bool = False,
+) -> list[transforms.transform.MapTransform]:
+    # preprocessing: normalise -> pad -> resize -> to_rgb
+    preprocessing: list[transforms.transform.MapTransform] = [
+        LoadImaged(
+            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+            reader=data.image_reader.PILReader,
+            image_only=True,
+            ensure_channel_first=True,
+            reverse_indexing=False,
+        ),
+        NormaliseTransformd([MONAI_KEYS.IMAGE], clamp=(-1, 1)),
+    ]
+    if pad:
+        preprocessing.append(PadTransformd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]))
+    preprocessing.append(
+        ResizeTransformd(
+            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL], image_size=image_size, pad=pad
+        )
+    )
+    if rgb:
+        preprocessing.append(ToRGBTransformd([MONAI_KEYS.IMAGE]))
+
+    if not augmentations:
+        return preprocessing
+
+    return [
+        *preprocessing,
+        RandAffined(
+            [MONAI_KEYS.IMAGE],
+            scale_range=(0.95, 1.05),
+            translate_range=(
+                image_size * 0.05,
+                image_size * 0.05,
+            ),
+            prob=0.3,
+        ),
+        RandGaussianSmoothd(
+            [MONAI_KEYS.IMAGE], sigma_x=(3, 5), sigma_y=(3, 5), prob=0.3
+        ),
+        RandGaussianSharpend(  # TODO: inspect how equivalent this is.
+            [MONAI_KEYS.IMAGE], prob=0.3
+        ),
+        Rand2DElasticd(  # TODO: inspect how equivalent this is.
+            [MONAI_KEYS.IMAGE],
+            spacing=(1, 1),
+            magnitude_range=(0, 45),
+            prob=0.2,
+        ),
+    ]
+
+
+class NormaliseTransform(transforms.transform.Transform):
+    def __init__(self, clamp: tuple[int, int] = (-1, 1)) -> None:
+        self._clamp_range = clamp
+
+    def __call__(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
+        tensor = convert_to_tensor(data=data, track_meta=get_track_meta())
+        mean = tensor.mean()
+        std = tensor.std(correction=1)
+        tensor -= mean
+        tensor /= 3 * std
+        tensor.clamp_(*self._clamp_range)
+        return tensor
+
+
+class NormaliseTransformd(transforms.transform.MapTransform):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        clamp: tuple[int, int] = (-1, 1),
+        allow_missing_keys: bool = False,
+    ) -> None:
+        super().__init__(keys, allow_missing_keys=allow_missing_keys)
+        self._transform = NormaliseTransform(clamp=clamp)
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            d[key] = self._transform(d[key])
+        return d
+
+
+class PadTransformd(transforms.transform.MapTransform):
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            d[key] = self._transform(d[key])
+        return d
+
+    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+        # Calculate padding
+        image_shape = (image.shape[-2], image.shape[-1])
+        large_axis = np.argmax(image_shape)
+        small_axis = 1 - large_axis
+        axes_diff = image_shape[large_axis] - image_shape[small_axis]
+        pad_size, remainder = divmod(axes_diff, 2)
+        # Padding is [left, top, right, bottom]
+        # Additional padding due to remainder will be added to the top or right
+        padding = [0, pad_size + remainder, 0, pad_size]
+        if large_axis == 0:
+            padding = padding[::-1]
+        return functional_transforms.pad(image, padding, fill=0)
+
+
+class ResizeTransformd(transforms.transform.MapTransform):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        image_size: int,
+        pad: bool,
+        allow_missing_keys: bool = False,
+    ) -> None:
+        super().__init__(keys, allow_missing_keys=allow_missing_keys)
+        self._image_size = image_size
+        self._pad = pad
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            d[key] = self._transform(
+                d[key], mask=key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED)
+            )
+        return d
+
+    def _transform(self, image: torch.Tensor, mask: bool) -> torch.Tensor:
+        if self._pad:
+            target_shape = (self._image_size, self._image_size)
+        else:
+            target_shape = ResizeTransformd._get_resize_shape(image, self._image_size)
+        return functional_transforms.resize(
+            image,
+            list(target_shape),
+            interpolation=InterpolationMode.NEAREST_EXACT
+            if mask
+            else InterpolationMode.BICUBIC,
+            antialias=True,
+        )
+
+    @staticmethod
+    def _get_resize_shape(image, image_size: int) -> tuple[int, int]:
+        image_shape_array = np.asarray(image.shape[-2:])
+        axis_multiplier = np.min(image_size / image_shape_array)
+        shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
+        return (int(shape[0]), int(shape[1]))
+
+
+class ToRGBTransformd(transforms.transform.MapTransform):
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            d[key] = self._transform(d[key], mask=key == MONAI_KEYS.LABEL)
+        return d
+
+    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+        return functional_transforms.grayscale_to_rgb(image)
+
+    @staticmethod
+    def _get_resize_shape(image, image_size: int) -> tuple[int, int]:
+        image_shape_array = np.asarray(image.shape[-2:])
+        axis_multiplier = np.min(image_size / image_shape_array)
+        shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
+        return (int(shape[0]), int(shape[1]))
