@@ -15,14 +15,14 @@ from monai import data, transforms, losses, optimizers, metrics, inferers
 #     from_engine,
 # )
 
-from schedulers import lr_scheduler_creation_functions
-from augmentations import get_transform_list
-from utils import MONAI_KEYS
+from ap_model_training.schedulers import lr_scheduler_creation_functions
+from ap_model_training.augmentations import get_transform_list
+from ap_model_training.utils import MONAI_KEYS
 
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from collections.abc import Callable, Sequence, Mapping
+    from collections.abc import Callable, Mapping
     from matplotlib.axes import Axes
     from numpy.typing import NDArray
 
@@ -34,9 +34,7 @@ def create_datasets(
     input_data: NDArray[np.str_] | pd.DataFrame,
     image_size: int,
     validation_split: float = 0.2,
-    foreground_labels: Sequence[int] | None = None,
     *,
-    label_changes: list[tuple[int, int]] = [],
     dataset_type: type[data.Dataset] = data.Dataset,
     **transform_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
@@ -61,9 +59,9 @@ def create_datasets(
             transform=transforms.Compose(
                 get_transform_list(
                     image_size,
-                    training=True,
-                    label_changes=label_changes,
-                    foreground_labels=foreground_labels,
+                    augmentations=True,
+                    pad=True,
+                    rgb=True,
                     **transform_kwargs,
                 )
             ),
@@ -73,8 +71,9 @@ def create_datasets(
             transform=transforms.Compose(
                 get_transform_list(
                     image_size,
-                    training=False,
-                    label_changes=label_changes,
+                    augmentations=False,
+                    pad=True,
+                    rgb=True,
                     **transform_kwargs,
                 )
             ),

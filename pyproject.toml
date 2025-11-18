@@ -1,0 +1,150 @@
+[build-system]
+requires = [
+    "setuptools >= 77.0.3, < 81",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ap_model_traning"
+description = "Package to train a SEM segmentation model for adaptive polish"
+license = { file = "LICENSE" }
+dynamic = [
+    "version",
+    "readme",
+]
+authors = [
+    { name = "Thomas Fish", email = "thomas.fish@rfi.ac.uk" },
+    { name = "Casper Berger", email = "casper.berger@rfi.ac.uk" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "torchvision",
+    "segmentation-models-pytorch>=0.2.0",
+    "monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard,ignite]",
+
+]
+
+[project.urls]
+"Source" = "https://github.com/rosalindfranklininstitute/adaptive_polish"
+"Tracker" = "https://github.com/rosalindfranklininstitute/adaptive_polish/issues"
+
+[tool.setuptools.dynamic]
+readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.setuptools_scm]
+version_file = "adaptive_polish/_version.py"
+
+[tool.setuptools.packages.find]
+where = [
+    "src",
+]
+exclude = [
+    "tests",
+    "scripts",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "microsoft-python-type-stubs@git+https://github.com/microsoft/python-type-stubs.git",
+]
+scripts = [
+    "jupyter",
+    "ipywidgets",
+]
+
+# Extras that are linked with the PyTorch index for CPU or CUDA version (if using uv)
+cpu = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+cu113 = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+cu118 = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+cu126 = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+cu128 = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+
+[tool.uv]
+conflicts = [
+    [
+        { extra = "cpu" },
+        { extra = "cu113" },
+        { extra = "cu118" },
+        { extra = "cu126" },
+        { extra = "cu128" },
+    ],
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu118", extra = "cu113" },
+    { index = "pytorch-cu118", extra = "cu118" },
+    { index = "pytorch-cu126", extra = "cu126" },
+    { index = "pytorch-cu128", extra = "cu128" },
+]
+torchvision = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu118", extra = "cu113" },
+    { index = "pytorch-cu118", extra = "cu118" },
+    { index = "pytorch-cu126", extra = "cu126" },
+    { index = "pytorch-cu128", extra = "cu128" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu113"
+url = "https://download.pytorch.org/whl/cu113"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.pytest.ini_options]
+addopts = "-vvvv --cov=src --cov-report term --cov-report html -p no:faulthandler -p no:napari -p no:napari-plugin-engine -p no:npe2"
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
+explicit_package_bases = true
+follow_untyped_imports = true
+
+[tool.pyright]
+reportPrivateImportUsage = "information"

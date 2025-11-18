@@ -1,4 +1,4 @@
-from lr import plot_learning_rates
+from ap_model_training.lr import plot_learning_rates
 
 test_csv = "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/test.csv"
 all_files_csv = (

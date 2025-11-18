@@ -10,8 +10,8 @@ import mlflow
 import torch
 import numpy as np
 
-import run
-from utils import MONAI_LOG_DIR
+from ap_model_training import run
+from ap_model_training.utils import MONAI_LOG_DIR
 
 _logger = logging.getLogger("adaptive_milling_training")
 _logger.propagate = False

@@ -25,7 +25,7 @@ def smp_efficientnet_b4_unet(
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
     **kwargs: typing.Any,
-) -> smp.UNet:
+) -> smp.Unet:
     return smp.Unet(
         encoder_name="efficientnet-b4",
         encoder_weights=encoder_weights,
@@ -40,7 +40,7 @@ def smp_efficientnet_b4_unetplusplus(
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
     **kwargs: typing.Any,
-) -> smp.UNetPlusPlus:
+) -> smp.UnetPlusPlus:
     return smp.UnetPlusPlus(
         encoder_name="efficientnet-b4",
         encoder_weights=encoder_weights,
@@ -120,7 +120,7 @@ def segresnetvae(
     **kwargs: typing.Any,
 ) -> nets.SegResNetVAE:
     return nets.SegResNetVAE(
-        input_image_size,
+        input_image_size=input_image_size,  # type: ignore
         spatial_dims=2,
         in_channels=1,
         out_channels=label_count,
@@ -138,7 +138,7 @@ def fpn(
         in_channels=1,
         classes=label_count,
         activation=None,
-        decoder_attention_type="scse",
+        decoder_attention_type="scse",  # type: ignore
     )
 
 

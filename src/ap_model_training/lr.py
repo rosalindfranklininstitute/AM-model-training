@@ -13,15 +13,15 @@ from monai import optimizers
 
 import matplotlib.pyplot as plt
 
-import setup
-import files
-import models
-import losses
+from ap_model_training import setup
+from ap_model_training import files
+from ap_model_training import models
+from ap_model_training import losses
 
 if typing.TYPE_CHECKING:
     from os import PathLike
     from matplotlib.axes import Axes
-    from setup import TrainingObjects
+    from ap_model_training.setup import TrainingObjects
 
 
 _logger = logging.getLogger("adaptive_milling_training")
@@ -99,7 +99,6 @@ def plot_learning_rates(
         df,
         image_size=image_size,
         validation_split=0.2,
-        foreground_labels=foreground_labels,
         # dataset_type=CacheDataset,
     )
     _logger.info("Datasets loaded")
@@ -170,6 +169,7 @@ def plot_learning_rates(
     )
 
     for i, lr_ax in enumerate(lr_axs.flat):
+        model_name = "Unset"
         if i >= len(models_to_test):
             lr_ax.set_axis_off()
             continue

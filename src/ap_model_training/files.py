@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-from utils import MONAI_KEYS
+from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from os import PathLike

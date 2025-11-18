@@ -6,11 +6,11 @@ from os import PathLike
 
 import numpy as np
 
-import setup
-import files
-import train
-import models
-import losses
+from ap_model_training import setup
+from ap_model_training import files
+from ap_model_training import train
+from ap_model_training import models
+from ap_model_training import losses
 
 import mlflow
 
@@ -18,7 +18,7 @@ if typing.TYPE_CHECKING:
     from os import PathLike
 
 
-_logger = logging.getLogger("adaptive_milling_training")
+_logger = logging.getLogger(__package__)
 
 
 def setup_training(
@@ -62,7 +62,6 @@ def setup_training(
         df,
         image_size=image_size,
         validation_split=0.2,
-        foreground_labels=foreground_labels,
     )
     _logger.info("Datasets loaded")
 

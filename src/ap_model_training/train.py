@@ -25,12 +25,12 @@ from monai.transforms import Compose
 from monai.metrics import Cumulative
 from monai.utils import set_determinism
 
-from utils import MONAI_KEYS
+from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from os import PathLike
     from monai.metrics import Metric
-    from setup import TrainingObjects, TrainingParameters
+    from ap_model_training.setup import TrainingObjects, TrainingParameters
 
 
 _logger = logging.getLogger("adaptive_milling_training")

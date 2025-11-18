@@ -9,8 +9,8 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 import numpy as np
 
-import lr
-from losses import loss_creation_functions
+from ap_model_training import lr
+from ap_model_training.losses import loss_creation_functions
 
 _handler = logging.StreamHandler(sys.stdout)
 _handler.setFormatter(
