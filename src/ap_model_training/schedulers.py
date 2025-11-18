@@ -1,7 +1,11 @@
+from __future__ import annotations
 import typing
 
 from torch.optim import lr_scheduler as torch_lr_scheduler, Optimizer
 from monai.optimizers import lr_scheduler as monai_lr_scheduler
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def onecyclelr(
@@ -25,7 +29,6 @@ def cycliclr(
     optimizer: Optimizer,
     base_lr: float,
     max_lr: float,
-    epochs: int,
     step_size_up: int,
     step_size_down: int | None = None,
     **kwargs: typing.Any,
@@ -34,7 +37,6 @@ def cycliclr(
         optimizer,
         base_lr=base_lr,
         max_lr=max_lr,
-        epochs=epochs,
         step_size_up=step_size_up,
         step_size_down=step_size_down,
     )
@@ -54,7 +56,9 @@ def warmupcosineschedule(
     )
 
 
-lr_scheduler_creation_functions: dict[str, torch_lr_scheduler.LRScheduler] = {
+lr_scheduler_creation_functions: dict[
+    str, Callable[..., torch_lr_scheduler.LRScheduler]
+] = {
     "onecyclelr": onecyclelr,
     "cycliclr": cycliclr,
     "warmupcosineschedule": warmupcosineschedule,
