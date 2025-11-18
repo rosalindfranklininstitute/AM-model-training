@@ -15,13 +15,14 @@ from monai import data, transforms, losses, optimizers, metrics, inferers
 #     from_engine,
 # )
 
+from schedulers import lr_scheduler_creation_functions
 from augmentations import get_transform_list
 from utils import MONAI_KEYS
 
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Sequence, Mapping
     from matplotlib.axes import Axes
     from numpy.typing import NDArray
 
@@ -32,12 +33,11 @@ _logger = logging.getLogger("adaptive_milling_training")
 def create_datasets(
     input_data: NDArray[np.str_] | pd.DataFrame,
     image_size: int,
-    label_count: int,
     validation_split: float = 0.2,
     foreground_labels: Sequence[int] | None = None,
     *,
     label_changes: list[tuple[int, int]] = [],
-    dataset_type: data.Dataset = data.Dataset,
+    dataset_type: type[data.Dataset] = data.Dataset,
     **transform_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
     if isinstance(input_data, np.ndarray):
@@ -61,7 +61,6 @@ def create_datasets(
             transform=transforms.Compose(
                 get_transform_list(
                     image_size,
-                    label_count=label_count,
                     training=True,
                     label_changes=label_changes,
                     foreground_labels=foreground_labels,
@@ -74,7 +73,6 @@ def create_datasets(
             transform=transforms.Compose(
                 get_transform_list(
                     image_size,
-                    label_count=label_count,
                     training=False,
                     label_changes=label_changes,
                     **transform_kwargs,
@@ -115,6 +113,7 @@ class TrainingParameters:
     loss_weights: tuple[float, ...] | None = None
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
+    include_background: bool = False
 
     def __post_init__(self):
         self.current_metrics = {"train": {}, "val": {}}
@@ -123,7 +122,7 @@ class TrainingParameters:
     def update_metrics(
         self,
         epoch: int,
-        metrics_dict: dict[str, float | NDArray[typing.Any]],
+        metrics_dict: Mapping[str, float],
         stage: typing.Literal["train", "val"],
     ) -> bool:
         is_best = False
@@ -173,8 +172,9 @@ class TrainingObjects:
     model: torch.nn.Module
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
-    train_metrics: dict[str, metrics.Metric]
-    val_metrics: dict[str, metrics.Metric]
+    lr_scheduler: torch.optim.lr_scheduler.LRScheduler
+    train_metrics: Mapping[str, tuple[metrics.Metric, list[float] | None]]
+    val_metrics: Mapping[str, tuple[metrics.Metric, list[float] | None]]
     grad_scaler: torch.GradScaler | None = None
     post_train_transform: transforms.Transform | Callable = lambda x: x
     post_train_label_transform: transforms.Transform | Callable = lambda x: x
@@ -184,17 +184,12 @@ class TrainingObjects:
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     training_dataloader: data.Dataloader = field(init=False)
     validation_dataloader: data.Dataloader = field(init=False)
-    lr_scheduler: torch._LRScheduler | None = field(init=False)
     # InitVars:
     training_data_workers: InitVar[int] = 8
     validation_data_workers: InitVar[int] = 4
     training_batch_size: InitVar[int] = 4
     validation_batch_size: InitVar[int] = 1
     check_loaders: InitVar[bool] = True
-    lr_scheduler_class: InitVar[type[torch._LRScheduler] | None] = (
-        optimizers.WarmupCosineSchedule
-    )
-    lr_scheduler_kwargs: InitVar[dict[str, typing.Any] | None] = None
 
     def __post_init__(
         self,
@@ -203,19 +198,7 @@ class TrainingObjects:
         training_batch_size: int,
         validation_batch_size: int,
         check_loaders: bool,
-        lr_scheduler_class: type[torch._LRScheduler],
-        lr_scheduler_kwargs: dict[str, typing.Any] | None,
     ) -> None:
-        if lr_scheduler_kwargs is None:
-            lr_scheduler_kwargs = {}
-
-        if lr_scheduler_class is None:
-            self.lr_scheduler = None
-        else:
-            self.lr_scheduler = lr_scheduler_class(
-                optimizer=self.optimizer, **lr_scheduler_kwargs
-            )
-
         self.training_dataloader, self.validation_dataloader = load_data(
             self,
             training_batch_size=training_batch_size,
@@ -237,32 +220,47 @@ def setup_training_objects(
     model: torch.nn.Module,
     loss_function: losses._Loss,
     learning_rate: float = 1e-4,
-    include_background: bool = False,
+    include_background: bool = True,
+    lr_scheduler_name: str = "onecyclelr",
+    lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     **kwargs: typing.Any,
 ) -> TrainingObjects:
+    if lr_scheduler_kwargs is None:
+        lr_scheduler_kwargs = {}
+
     train_metrics = {
-        "mean_iou": metrics.MeanIoU(
-            include_background=include_background,
-            reduction="mean",
+        "mean_iou": (
+            metrics.MeanIoU(
+                include_background=include_background,
+                reduction="mean",
+            ),
+            None,
         ),
-        "mean_dice": metrics.DiceMetric(
-            include_background=include_background,
-            reduction="mean_batch",
+        "mean_dice": (
+            metrics.DiceMetric(
+                include_background=include_background,
+                reduction="mean_batch",
+            ),
+            None,
         ),
     }
 
     val_metrics = {
-        "mean_iou": metrics.MeanIoU(
-            include_background=include_background,
-            reduction="mean_batch",
+        "mean_iou": (
+            metrics.MeanIoU(
+                include_background=include_background, reduction="mean_batch"
+            ),
+            None,
         ),
-        "mean_dice": metrics.DiceMetric(
-            include_background=include_background,
-            reduction="mean_batch",
+        "mean_dice": (
+            metrics.DiceMetric(
+                include_background=include_background, reduction="mean_batch"
+            ),
+            None,
         ),
     }
 
-    labels_to_keep = tuple(range(1 - int(include_background), num_classes))
+    labels_to_keep = tuple(range(1 - int(include_background), num_classes + 1))
 
     post_train_transform = transforms.Compose(
         [
@@ -320,7 +318,11 @@ def setup_training_objects(
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-    grad_scaler = torch.GradScaler(device=device)
+    lr_scheduler = lr_scheduler_creation_functions[lr_scheduler_name](
+        optimizer, **lr_scheduler_kwargs
+    )
+
+    grad_scaler = torch.GradScaler(device=device.type)
     # grad_scaler = None
 
     training_batch_size = 6
@@ -333,6 +335,7 @@ def setup_training_objects(
         model=model,
         loss_function=loss_function,
         optimizer=optimizer,
+        lr_scheduler=lr_scheduler,
         grad_scaler=grad_scaler,
         train_metrics=train_metrics,
         val_metrics=val_metrics,
@@ -410,7 +413,6 @@ def find_learning_rate(
         start_lr=lower_learning_rate,
         end_lr=upper_learning_rate,
         num_iter=iterations,
-        amp=amp,
     )
     # for grad, loss in zip(*lr_finder.get_lrs_and_losses())
     #     print(f"Gradient, loss: {grad}, {loss}")

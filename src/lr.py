@@ -1,4 +1,5 @@
 from __future__ import annotations
+import gc
 import logging
 import typing
 import math
@@ -61,6 +62,7 @@ def find_learning_rate(
 
 def plot_learning_rates(
     csv_path: str | PathLike[str],
+    output_dir: str | PathLike[str],
     cpu_only: bool = False,
     models_to_ignore: list[str] | None = None,
     loss_name: str = "diceloss",
@@ -69,10 +71,15 @@ def plot_learning_rates(
     model_kwargs: dict[str, typing.Any] | None = None,
     loss_kwargs: dict[str, typing.Any] | None = None,
     gpu_number: int | None = None,
+    include_background: bool = False,
 ) -> None:
     csv_path = Path(csv_path).absolute()
     if not csv_path.is_file():
         raise FileNotFoundError(csv_path)
+
+    output_dir = Path(output_dir)
+    if not output_dir.is_dir():
+        raise FileNotFoundError(output_dir)
 
     if model_kwargs is None:
         model_kwargs = {}
@@ -91,16 +98,19 @@ def plot_learning_rates(
     training_data, validation_data = setup.create_datasets(
         df,
         image_size=image_size,
-        label_count=num_classes,
         validation_split=0.2,
         foreground_labels=foreground_labels,
         # dataset_type=CacheDataset,
     )
     _logger.info("Datasets loaded")
 
+    device = setup.get_device(cpu_only, gpu=gpu_number)
+
+    label_names = ("padding", "background", "gis", "lamella", "crack", "vacuum")
+
     training_parameters = setup.TrainingParameters(
         num_classes=num_classes,
-        label_names=("background", "gis", "lamella", "crack", "void"),
+        label_names=label_names[1 - int(include_background) :],
         input_image_shape=(image_size, image_size),
         learning_rate=1e-3,
         best_metric="mean_of_key_metrics",
@@ -122,23 +132,24 @@ def plot_learning_rates(
         training_batch_size=6,
         validation_batch_size=3,
         loss_weights=loss_kwargs.get("weights", None),
+        include_background=include_background,
     )
 
-    device = setup.get_device(cpu_only, gpu=gpu_number)
-
-    lr_dir = Path.cwd().parent / "logs" / "learning_rate"
-    lr_dir.mkdir(exist_ok=True)
-
-    model_kwargs: dict[str, typing.Any] = {
-        "label_count": training_parameters.num_classes,
-        "input_image_size": training_parameters.input_image_shape,
-        **model_kwargs,
-    }
-    loss_kwargs: dict[str, typing.Any] = {
-        "num_classes": training_parameters.num_classes,
-        **loss_kwargs,
-    }
-
+    model_kwargs.update(
+        {
+            "label_count": training_parameters.num_classes
+            + 1,  # for background (always included in model)
+            "input_image_size": training_parameters.input_image_shape,
+        }
+    )
+    loss_kwargs.update(
+        {
+            "num_classes": training_parameters.num_classes
+            + 1
+            - int(include_background),
+            "include_background": training_parameters.include_background,
+        }
+    )
     if loss_kwargs.get("weights") is not None:
         loss_kwargs["weights"] = losses.weights_to_tensor(
             loss_kwargs["weights"], device=device
@@ -175,14 +186,16 @@ def plot_learning_rates(
                 loss_function=loss_function,
                 model=model,
                 num_classes=training_parameters.num_classes,
-                # training_data_workers=0,
-                # validation_data_workers=0,
-                lr_scheduler_class=None,
+                include_background=include_background,
             )
 
             find_learning_rate(
                 lr_ax, training_objects=training_objects, iterations=iterations
             )
+            del model
+            del loss_function
+            clear_memory()
+
         except Exception:
             logging.error("Failed to find and plot learning rate", exc_info=True)
         lr_ax.set_title(f"{model_name}\n{lr_ax.get_title()}")
@@ -190,6 +203,13 @@ def plot_learning_rates(
         lr_fig.canvas.draw()
 
     lr_fig.savefig(
-        lr_dir
+        output_dir
         / f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{csv_path.stem}_{loss_name}.png"
     )
+
+
+def clear_memory() -> None:
+    """Helps avoid the memory usage gradually growing (especially GPU)"""
+    with torch.no_grad():
+        gc.collect()
+        torch.cuda.empty_cache()

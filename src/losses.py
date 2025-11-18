@@ -9,7 +9,8 @@ from monai.networks.utils import one_hot
 if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
     from numpy import float32 as np_float32
-    from torch import DeviceLikeType, Tensor
+    from torch import Tensor
+    from torch._prims_common import DeviceLikeType
     from collections.abc import Callable, Sequence
 
 
@@ -61,23 +62,44 @@ def loss_wrapper(
     return wrapped_loss
 
 
-def diceloss(weights: Tensor, **kwargs) -> losses.DiceLoss:
+def diceloss(include_background: bool, weights: Tensor, **kwargs) -> losses.DiceLoss:
+    if not include_background:
+        weights = weights[1:]
     return losses.DiceLoss(
-        include_background=False,
+        include_background=include_background,
         to_onehot_y=True,
         softmax=True,
         weight=weights,
     )
 
 
-def diceceloss(weights: Tensor, **kwargs) -> losses.DiceCELoss:
+def diceceloss(
+    include_background: bool, weights: Tensor, **kwargs
+) -> losses.DiceCELoss:
     return losses.DiceCELoss(
-        include_background=False,
+        include_background=include_background,
         to_onehot_y=True,
         softmax=True,
+        # DiceCELoss doesn't trim the first weight value:
         weight=weights,
         lambda_dice=0.5,
         lambda_ce=0.5,
+    )
+
+
+def dicefocalloss(
+    include_background: bool, weights: Tensor, **kwargs
+) -> losses.DiceFocalLoss:
+    if not include_background:
+        weights = weights[1:]
+    return losses.DiceFocalLoss(
+        include_background=include_background,
+        to_onehot_y=True,
+        softmax=True,
+        # DiceCELoss doesn't trim the first weight value:
+        weight=weights,
+        lambda_dice=0.5,
+        lambda_focal=0.5,
     )
 
 
@@ -85,8 +107,9 @@ def softdicecldiceloss(**kwargs) -> losses.SoftDiceclDiceLoss:
     return losses.SoftDiceclDiceLoss()
 
 
-def naclloss(num_classes: int, **kwargs) -> losses.NACLLoss:
-    return losses.NACLLoss(num_classes, dim=2, kernel_size=5)
+def naclloss(include_background: bool, num_classes: int, **kwargs) -> losses.NACLLoss:
+    return losses.NACLLoss(num_classes + int(include_background), dim=2, kernel_size=5)
+
 
 def generalized_wasserstein_dice_loss(
     dist_matrix: NDArray[np_float32], weighting_mode: str = "default", **kwargs
@@ -97,9 +120,11 @@ def generalized_wasserstein_dice_loss(
     )
 
 
-def generalizeddicefocalloss(weights: Tensor, **kwargs):
+def generalizeddicefocalloss(include_background: bool, weights: Tensor, **kwargs):
+    if not include_background:
+        weights = weights[1:]
     return losses.GeneralizedDiceFocalLoss(
-        include_background=False,
+        include_background=include_background,
         to_onehot_y=True,
         softmax=True,
         lambda_focal=0.5,
@@ -108,17 +133,18 @@ def generalizeddicefocalloss(weights: Tensor, **kwargs):
     )
 
 
-def generalizeddiceloss(**kwargs):
+def generalizeddiceloss(include_background: bool, **kwargs):
     return losses.GeneralizedDiceLoss(
-        include_background=False,
+        include_background=include_background,
         to_onehot_y=True,
         softmax=True,
     )
 
 
-loss_creation_functions: dict[str, Callable[..., losses._Loss]] = {
+loss_creation_functions: dict[str, Callable] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
+    "dicefocalloss": dicefocalloss,
     "softdicecldiceloss": softdicecldiceloss,
     "naclloss": naclloss,
     "generalized_wasserstein_dice_loss": generalized_wasserstein_dice_loss,
