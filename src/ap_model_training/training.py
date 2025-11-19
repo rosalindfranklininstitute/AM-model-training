@@ -105,8 +105,11 @@ try:
         },
     )
 finally:  # noqa: E722
-    with torch.no_grad():
-        torch.cuda.empty_cache()
+    try:
+        with torch.no_grad():
+            torch.cuda.empty_cache()
+    except Exception:
+        _logger.error("Failed to clear CUDA cache", exc_info=True)
     try:
         mlflow.end_run()
     except:  # noqa: E722
