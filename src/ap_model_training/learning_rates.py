@@ -25,9 +25,8 @@ _logger.setLevel(logging.DEBUG)
 _logger.addHandler(_handler)
 
 
-test_csv = "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/test.csv"
 all_files_csv = (
-    "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files.csv"
+    "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files4.csv"
 )
 
 
@@ -43,7 +42,7 @@ dist_matrix = np.asarray(
     dtype=np.float32,
 )
 
-lr_dir = Path(__file__).parent.parent / "learning_rate"
+lr_dir = Path.home() / "ap_model_training" / "learning_rate"
 lr_dir.mkdir(exist_ok=True)
 
 for loss_name in loss_creation_functions.keys():

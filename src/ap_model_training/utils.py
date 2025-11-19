@@ -5,8 +5,8 @@ from monai.utils.enums import CommonKeys
 
 MONAI_KEYS = CommonKeys
 
-TENSORBOARD_LOG_DIR = (Path(__file__).parent.parent / "logs" / "tensorboard").absolute()
+TENSORBOARD_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "tensorboard"
 TENSORBOARD_LOG_DIR.mkdir(exist_ok=True)
 
-MONAI_LOG_DIR = (Path.home() / "logs" / "mlflow").absolute()
+MONAI_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "mlflow"
 MONAI_LOG_DIR.mkdir(exist_ok=True)
