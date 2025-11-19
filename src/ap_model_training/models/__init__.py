@@ -10,10 +10,13 @@ if typing.TYPE_CHECKING:
 
 
 def efficientnet_b4_flexibleunet(
-    label_count: int = 5, pretrained: bool = False, **kwargs: typing.Any
+    num_channels: int = 3,
+    label_count: int = 5,
+    pretrained: bool = False,
+    **kwargs: typing.Any,
 ) -> nets.FlexibleUNet:
     return nets.FlexibleUNet(
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
         backbone="efficientnet-b4",
         pretrained=pretrained,
@@ -22,6 +25,7 @@ def efficientnet_b4_flexibleunet(
 
 
 def smp_efficientnet_b4_unet(
+    num_channels: int = 3,
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
     **kwargs: typing.Any,
@@ -32,11 +36,12 @@ def smp_efficientnet_b4_unet(
         classes=label_count,
         activation=None,
         decoder_attention_type="scse",
-        in_channels=1,
+        in_channels=num_channels,
     )
 
 
 def smp_efficientnet_b4_unetplusplus(
+    num_channels: int = 3,
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
     **kwargs: typing.Any,
@@ -47,17 +52,18 @@ def smp_efficientnet_b4_unetplusplus(
         classes=label_count,
         activation=None,
         decoder_attention_type="scse",
-        in_channels=1,
+        in_channels=num_channels,
     )
 
 
 def unet(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> nets.UNet:
     return nets.UNet(
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
         channels=(16, 32, 64, 128, 256),
         strides=(2, 2, 2, 2),
@@ -67,12 +73,13 @@ def unet(
 
 
 def dynunet(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> nets.DynUNet:
     return nets.DynUNet(
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
         kernel_size=(3, 3, 5, 5),
         upsample_kernel_size=(3, 3, 5, 5),
@@ -82,39 +89,43 @@ def dynunet(
 
 
 def segresnet(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> nets.SegResNet:
     return nets.SegResNet(
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
     )
 
 
 def segresnetds(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> nets.SegResNetDS:
     return nets.SegResNetDS(
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
     )
 
 
 def segresnetds2(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> nets.SegResNetDS2:
     return nets.SegResNetDS2(
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
     )
 
 
 def segresnetvae(
+    num_channels: int = 3,
     label_count: int = 5,
     input_image_size=tuple[int, int],
     **kwargs: typing.Any,
@@ -122,20 +133,21 @@ def segresnetvae(
     return nets.SegResNetVAE(
         input_image_size=input_image_size,  # type: ignore
         spatial_dims=2,
-        in_channels=1,
+        in_channels=num_channels,
         out_channels=label_count,
         vae_estimate_std=True,
     )
 
 
 def fpn(
+    num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
 ) -> smp.FPN:
     return smp.FPN(
         encoder_name="efficientnet-b6",
         encoder_weights=None,
-        in_channels=1,
+        in_channels=num_channels,
         classes=label_count,
         activation=None,
         decoder_attention_type="scse",  # type: ignore
