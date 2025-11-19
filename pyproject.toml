@@ -24,6 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
+    "numpy",
     "torch",
     "torchvision",
     "segmentation-models-pytorch>=0.2.0",
@@ -75,6 +76,10 @@ dev = [
 scripts = [
     "jupyter",
     "ipywidgets",
+]
+reporting = [
+    "mlflow",
+    "tensorboard"
 ]
 
 # Extras that are linked with the PyTorch index for CPU or CUDA version (if using uv)
