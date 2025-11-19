@@ -93,6 +93,7 @@ def get_device(cpu_only: bool = False, gpu: int | None = None) -> torch.device:
 @dataclass
 class TrainingParameters:
     num_classes: int
+    num_channels: int
     label_names: tuple[str, ...]
     input_image_shape: tuple[int, int]
     learning_rate: float
@@ -271,7 +272,7 @@ def setup_training_objects(
                 # keepdim=True,
                 # dtype=torch.long,
             ),
-            transforms.LabelToMask(labels_to_keep),
+            # transforms.LabelToMask(labels_to_keep),
             # transforms.EnsureType(dtype=torch.long),
         ]
     )
@@ -279,13 +280,13 @@ def setup_training_objects(
     post_train_label_transform = transforms.Compose(
         [
             transforms.AsDiscrete(
-                # argmax=True,
-                to_onehot=num_classes,
+                argmax=True,
+                # to_onehot=num_classes,
                 # dim=1,
                 # keepdim=True,
                 # dtype=torch.long,
             ),
-            transforms.LabelToMask(labels_to_keep),
+            # transforms.LabelToMask(labels_to_keep),
             # transforms.EnsureType(dtype=torch.long),
         ]
     )
@@ -296,9 +297,9 @@ def setup_training_objects(
             # ArgMax(dim=1),
             transforms.AsDiscrete(
                 argmax=True,
-                to_onehot=num_classes,
+                # to_onehot=num_classes,
             ),
-            transforms.LabelToMask(labels_to_keep),
+            # transforms.LabelToMask(labels_to_keep),
         ]
     )
 
@@ -306,10 +307,10 @@ def setup_training_objects(
         [
             # transforms.Activations(softmax=True),
             transforms.AsDiscrete(
-                # argmax=True,
-                to_onehot=num_classes,
+                argmax=True,
+                # to_onehot=num_classes,
             ),
-            transforms.LabelToMask(labels_to_keep),
+            # transforms.LabelToMask(labels_to_keep),
         ]
     )
 

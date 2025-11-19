@@ -112,7 +112,11 @@ def run(
     with mlflow.start_run():
         # log model to mlflow
         input_array = np.random.uniform(
-            size=(1, 1, *training_parameters.input_image_shape)
+            size=(
+                1,
+                training_parameters.num_channels,
+                *training_parameters.input_image_shape,
+            )
         ).astype(np.float32)
         model_signature = mlflow.models.infer_signature(
             input_array,

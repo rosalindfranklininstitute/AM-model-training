@@ -109,6 +109,7 @@ def plot_learning_rates(
 
     training_parameters = setup.TrainingParameters(
         num_classes=num_classes,
+        num_channels=3,
         label_names=label_names[1 - int(include_background) :],
         input_image_shape=(image_size, image_size),
         learning_rate=1e-3,
@@ -136,16 +137,17 @@ def plot_learning_rates(
 
     model_kwargs.update(
         {
-            "label_count": training_parameters.num_classes
-            + 1,  # for background (always included in model)
+            "label_count": training_parameters.num_classes,
+            # + 1,  # for background (always included in model)
+            "num_channels": training_parameters.num_channels,
             "input_image_size": training_parameters.input_image_shape,
         }
     )
     loss_kwargs.update(
         {
-            "num_classes": training_parameters.num_classes
-            + 1
-            - int(include_background),
+            "num_classes": training_parameters.num_classes,
+            # + 1
+            # - int(include_background),
             "include_background": training_parameters.include_background,
         }
     )
