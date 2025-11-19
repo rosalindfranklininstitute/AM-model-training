@@ -40,7 +40,7 @@ def find_learning_rate(
 ) -> None:
     lr_finder = optimizers.LearningRateFinder(
         model=training_objects.model,
-        optimizer=training_objects.optimizer,
+        optimizer=torch.optim.AdamW(training_objects.model.parameters()),
         criterion=training_objects.loss_function,
         device=training_objects.device,
     )
@@ -164,6 +164,16 @@ def plot_learning_rates(
             except ValueError:
                 logging.warning("'%s' is not a valid model to remove", model_to_ignore)
 
+    steps_per_epoch = int(
+        math.ceil(len(training_data) / training_parameters.training_batch_size)
+    )
+
+    lr_scheduler_kwargs = {
+        "max_lr": 1e-4,
+        "epochs": 80,
+        "steps_per_epoch": steps_per_epoch,
+    }
+
     nrows = int(math.floor(math.sqrt(len(models_to_test))))
     ncols = int(math.ceil(len(models_to_test) / nrows))
     lr_fig, lr_axs = plt.subplots(
@@ -189,6 +199,7 @@ def plot_learning_rates(
                 model=model,
                 num_classes=training_parameters.num_classes,
                 include_background=include_background,
+                lr_scheduler_kwargs=lr_scheduler_kwargs,
             )
 
             find_learning_rate(
@@ -204,10 +215,12 @@ def plot_learning_rates(
 
         lr_fig.canvas.draw()
 
-    lr_fig.savefig(
+    fig_path = (
         output_dir
         / f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{csv_path.stem}_{loss_name}.png"
     )
+    _logger.info("Plotting learning rates to %s", str(fig_path))
+    lr_fig.savefig(fig_path)
 
 
 def clear_memory() -> None:
