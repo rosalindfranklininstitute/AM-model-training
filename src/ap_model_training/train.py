@@ -100,7 +100,7 @@ def run(
     val_stopper = EarlyStopper(patience=training_parameters.val_patience)
 
     # Fix determinism for consistent results
-    set_determinism(seed=0)
+    set_determinism(seed=42)
 
     with mlflow.start_run():
         # log model to mlflow
