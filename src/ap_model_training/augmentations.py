@@ -324,6 +324,7 @@ def get_transform_list(
         image_only=True,
         ensure_channel_first=True,
         reverse_indexing=False,
+        dtype=np.long,
     )
     preprocessing: list[transforms.transform.MapTransform] = [
         NormaliseTransformd([MONAI_KEYS.IMAGE], clamp=(-1, 1)),
@@ -383,7 +384,9 @@ class NormaliseTransform(transforms.transform.Transform):
         self._clamp_range = clamp
 
     def __call__(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
-        tensor = convert_to_tensor(data=data, track_meta=get_track_meta())
+        tensor = convert_to_tensor(
+            data=data, dtype=torch.float32, track_meta=get_track_meta()
+        )
         mean = tensor.mean()
         std = tensor.std(correction=1)
         tensor -= mean
