@@ -347,8 +347,18 @@ def train(
 
         step_metrics = StepMetrics.calculate_metrics(
             loss=loss.item(),  # type: ignore
-            y=outputs.numpy(force=True),
-            y_pred=labels.numpy(force=True),
+            y=np.asarray(
+                [
+                    training_objects.post_train_label_transform(_).detach().cpu()
+                    for _ in decollate_batch(labels)
+                ]
+            ),
+            y_pred=np.asarray(
+                [
+                    training_objects.post_train_transform(_).detach().cpu()
+                    for _ in decollate_batch(outputs)
+                ]
+            ),
             weights=training_parameters.loss_weights,
         )
         step_metrics_list.append(step_metrics)
@@ -400,7 +410,6 @@ def validate(
     )
     step_metrics_list: list[StepMetrics] = []
     with torch.no_grad():
-        outputs: tuple[typing.Any] | None = None
         step = 1
         for step, data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
@@ -426,8 +435,18 @@ def validate(
 
             step_metrics = StepMetrics.calculate_metrics(
                 loss=loss.item(),  # type: ignore
-                y=outputs.numpy(force=True),
-                y_pred=labels.numpy(force=True),
+                y=np.asarray(
+                    [
+                        training_objects.post_train_label_transform(_).detach().cpu()
+                        for _ in decollate_batch(labels)
+                    ]
+                ),
+                y_pred=np.asarray(
+                    [
+                        training_objects.post_train_transform(_).detach().cpu()
+                        for _ in decollate_batch(outputs)
+                    ]
+                ),
                 weights=training_parameters.loss_weights,
             )
             step_metrics_list.append(step_metrics)

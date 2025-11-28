@@ -20,8 +20,10 @@ def dice_score(
     y_true: NDArray[np.integer[typing.Any]], y_pred: NDArray[np.integer[typing.Any]]
 ) -> NDArray[np.float64]:
     smooth = 1.0
-    intersection = np.sum(y_true * y_pred)
-    return (2.0 * intersection + smooth) / (y_true.sum() + y_pred.sum() + smooth)
+    intersection = np.sum(y_true * y_pred, axis=0)
+    return (2.0 * intersection + smooth) / (
+        y_true.sum(axis=0) + y_pred.sum(axis=0) + smooth
+    )
 
 
 @dataclass
@@ -134,9 +136,7 @@ class StepMetrics:
             mean = np.mean(value)
             object.__setattr__(self, f"mean_{f.name}", mean.item())
             if weights is not None:
-                weighted_mean = np.sum(np.multiply(value, weights), axis=1) / np.sum(
-                    weights
-                )
+                weighted_mean = np.sum(np.multiply(value, weights)) / np.sum(weights)
                 object.__setattr__(self, f"mean_{f.name}", weighted_mean.item())
 
     @classmethod
@@ -147,24 +147,50 @@ class StepMetrics:
         y_pred: NDArray[np.integer[typing.Any]],
         weights: ArrayLike | None,
     ) -> "StepMetrics":
-        flattened_y = y.swapaxes(0, 1).reshape((y.shape[1], -1))
-        flattened_y_pred = y_pred.swapaxes(0, 1).reshape((y.shape[1], -1))
+        # Flatten batches but keep labels separate (and labels on axis 1)
+        flattened_y = y.swapaxes(0, 1).reshape((y.shape[1], -1)).swapaxes(0, 1)
+        flattened_y_pred = (
+            y_pred.swapaxes(0, 1).reshape((y.shape[1], -1)).swapaxes(0, 1)
+        )
 
         iou = np.asarray(
-            jaccard_score(y_true=flattened_y, y_pred=flattened_y_pred, average=None)
+            jaccard_score(
+                y_true=flattened_y,
+                y_pred=flattened_y_pred,
+                average=None,
+                zero_division=0.0,
+            )
         )
         dice = np.asarray(dice_score(y_true=flattened_y, y_pred=flattened_y_pred))
         f1 = np.asarray(
-            f1_score(y_true=flattened_y, y_pred=flattened_y_pred, average=None)
+            f1_score(
+                y_true=flattened_y,
+                y_pred=flattened_y_pred,
+                average=None,
+                zero_division=0.0,
+            )
         )
         accuracy = np.asarray(
-            accuracy_score(y_true=flattened_y, y_pred=flattened_y_pred)
+            [
+                accuracy_score(y_true=flattened_y[:, _], y_pred=flattened_y_pred[:, _])
+                for _ in range(y.shape[1])
+            ]
         )
         precision = np.asarray(
-            precision_score(y_true=flattened_y, y_pred=flattened_y_pred, average=None)
+            precision_score(
+                y_true=flattened_y,
+                y_pred=flattened_y_pred,
+                average=None,
+                zero_division=0.0,
+            )
         )
         recall = np.asarray(
-            recall_score(y_true=flattened_y, y_pred=flattened_y_pred, average=None)
+            recall_score(
+                y_true=flattened_y,
+                y_pred=flattened_y_pred,
+                average=None,
+                zero_division=0.0,
+            )
         )
         return cls(
             weights=weights,
@@ -190,7 +216,7 @@ class StepMetrics:
             raise ValueError("No labels have been supplied")
         for k in tuple(d.keys()):
             v = d.pop(k)
-            if isinstance(v, np.ndarray):
+            if isinstance(v, np.ndarray) and len(v) > 1:
                 v = v.tolist()
                 if len(v) != len(labels):
                     raise ValueError("An incorrect number of labels have been supplied")
