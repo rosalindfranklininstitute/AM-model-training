@@ -99,9 +99,7 @@ def run(
     train_stopper = EarlyStopper(patience=training_parameters.train_patience)
     val_stopper = EarlyStopper(patience=training_parameters.val_patience)
 
-    # start a typical PyTorch training
-    val_interval: int = 2
-
+    # Fix determinism for consistent results
     set_determinism(seed=0)
 
     with mlflow.start_run():
@@ -156,7 +154,7 @@ def run(
                 for param in training_objects.model.encoder.parameters():
                     param.requires_grad = True
 
-            if (epoch + 1) % val_interval == 0:
+            if (epoch + 1) % training_parameters.val_interval == 0:
                 val_epoch_metrics, _, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
