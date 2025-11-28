@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 
 from monai.utils.enums import CommonKeys
@@ -10,3 +11,5 @@ TENSORBOARD_LOG_DIR.mkdir(exist_ok=True)
 
 MONAI_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "mlflow"
 MONAI_LOG_DIR.mkdir(exist_ok=True)
+
+LABEL_NAMES = ("background", "GIS", "lamella", "crack", "vacuum")

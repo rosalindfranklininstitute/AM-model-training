@@ -142,11 +142,12 @@ def segresnetvae(
 def fpn(
     num_channels: int = 3,
     label_count: int = 5,
+    pretrained: bool = False,
     **kwargs: typing.Any,
 ) -> smp.FPN:
     return smp.FPN(
         encoder_name="efficientnet-b6",
-        encoder_weights=None,
+        encoder_weights="imagenet" if pretrained else None,
         in_channels=num_channels,
         classes=label_count,
         activation=None,

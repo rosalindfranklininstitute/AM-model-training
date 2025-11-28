@@ -3,9 +3,12 @@ import logging
 import typing
 import time
 import gc
+import pandas as pd
+from importlib.metadata import distributions
 from pathlib import Path
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 from torchvision.transforms.functional import to_pil_image
@@ -25,15 +28,28 @@ from monai.transforms import Compose
 from monai.metrics import Cumulative
 from monai.utils import set_determinism
 
-from ap_model_training.utils import MONAI_KEYS
+from ap_model_training.utils import MONAI_KEYS, LABEL_NAMES
+from ap_model_training.metrics import StepMetrics, EpochMetrics
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from monai.metrics import Metric
     from ap_model_training.setup import TrainingObjects, TrainingParameters
 
 
 _logger = logging.getLogger("adaptive_milling_training")
+
+
+def get_requirements() -> list[str]:
+    requirements: list[str] = []
+    for dist in distributions():
+        name = dist.metadata["Name"]
+        version = dist.version
+        requirements.append(f"{name}=={version}")
+    return requirements
+
+
+pip_requirements = get_requirements()
+_tab10 = plt.get_cmap("tab10")
 
 
 class EarlyStopper:
@@ -44,7 +60,7 @@ class EarlyStopper:
         patience: int,
         min_delta: float = 0,
         cumulative_delta: bool = False,
-    ):
+    ) -> None:
         if patience < 1:
             raise ValueError("Argument patience should be positive integer.")
 
@@ -72,27 +88,6 @@ class EarlyStopper:
             self.best_score = score
             self.counter = 0
         return False
-
-
-def calculate_batch_metrics(
-    outputs: torch.Tensor,
-    labels: torch.Tensor,
-    metrics_dict: dict[str, tuple[Metric, list[float] | None]],
-) -> None:
-    for metric_key, (metric_fn, metric_scores) in metrics_dict.items():
-        if isinstance(metric_fn, Cumulative):
-            metric_fn(y_pred=outputs, y=labels)
-        else:
-            retval = metric_fn
-            if retval is not None:
-                if isinstance(metric_scores, list):
-                    if isinstance(retval, torch.Tensor):
-                        retval = retval.item()
-                    metric_scores.append(retval)
-                else:
-                    _logger.warning(
-                        "Not recording %s output as there is not list", metric_key
-                    )
 
 
 def run(
@@ -137,6 +132,9 @@ def run(
             for param in training_objects.model.encoder.parameters():
                 param.requires_grad = False
 
+        train_epoch_metrics_list: list[EpochMetrics] = []
+        val_epoch_metrics_list: list[EpochMetrics] = []
+
         for epoch in tqdm(
             range(training_parameters.max_epochs),
             desc="Training progress",
@@ -146,7 +144,10 @@ def run(
         ):
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
-            train(training_objects, training_parameters, epoch=epoch)
+            train_epoch_metrics, _, _ = train(
+                training_objects, training_parameters, epoch=epoch
+            )
+            train_epoch_metrics_list.append(train_epoch_metrics)
 
             clear_memory()
 
@@ -156,14 +157,17 @@ def run(
                     param.requires_grad = True
 
             if (epoch + 1) % val_interval == 0:
-                validate(
+                val_epoch_metrics, _, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
-                    model_path=model_path,
+                    model_path=model_path.with_suffix(
+                        f"_epoch{epoch:03}{model_path.suffix}"
+                    ),
                     model_signature=model_signature,
                 )
 
+                val_epoch_metrics_list.append(val_epoch_metrics)
                 clear_memory()
 
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
@@ -200,6 +204,26 @@ def run(
             "best_val_metrics",
             training_parameters.best_metrics["val"],
         )
+        pd.DataFrame(
+            [
+                _.to_dict(
+                    split_labels=True,
+                    labels=training_parameters.label_names,
+                )
+                for _ in train_epoch_metrics_list
+            ]
+        ).to_csv(model_path.with_suffix("_train_metrics.csv"))
+
+        pd.DataFrame(
+            [
+                _.to_dict(
+                    split_labels=True,
+                    labels=training_parameters.label_names,
+                )
+                for _ in val_epoch_metrics_list
+            ]
+        ).to_csv(model_path.with_suffix("_val_metrics.csv"))
+
         best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
         submit_validation_images_to_mflow(
             training_objects=training_objects,
@@ -212,7 +236,7 @@ def submit_validation_images_to_mflow(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
-):
+) -> None:
     # Log images using the best val epoch model
     training_objects.model.load_state_dict(
         state_dict=torch.load(
@@ -258,7 +282,7 @@ def submit_validation_images_to_mflow(
                 outputs,
                 step=epoch + 1,
                 timestamp=int(time.time()),
-                background_labelled=training_parameters.include_background,
+                separate_background=training_parameters.include_background,
             )
             del images
             del labels
@@ -273,16 +297,15 @@ def train(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
-) -> None:
+) -> tuple[EpochMetrics, list[StepMetrics], bool]:
     training_objects.model.train()
-    epoch_loss = 0
     epoch_len = int(
         np.ceil(
             training_parameters.total_training_data
             / training_parameters.training_batch_size
         )
     )
-
+    step_metrics_list: list[StepMetrics] = []
     for step, batch_data in tqdm(
         enumerate(training_objects.training_dataloader, 1),
         desc=f"Epoch {epoch + 1} training",
@@ -298,14 +321,6 @@ def train(
         with torch.autocast(training_objects.device.type):
             outputs = training_objects.training_inferer(images, training_objects.model)
             loss = training_objects.loss_function(outputs, labels)
-
-        outputs = [
-            training_objects.post_train_transform(_) for _ in decollate_batch(outputs)
-        ]
-        labels = [
-            training_objects.post_train_label_transform(_)
-            for _ in decollate_batch(labels)
-        ]
 
         skip_lr_scheduler = False
         if training_objects.grad_scaler is not None:
@@ -331,38 +346,47 @@ def train(
                 training_objects.lr_scheduler.step()
 
         # Calculate metrics and log progress for this step
-        epoch_loss += loss.item()
-        # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
-        mlflow.log_metric("train_loss", loss.item(), step=epoch_len * epoch + step)
+        print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
 
         del images
-        del loss
 
-        calculate_batch_metrics(
-            outputs,
-            labels,
-            metrics_dict=training_objects.train_metrics,
+        step_metrics = StepMetrics.calculate_metrics(
+            loss=loss.item(),  # type: ignore
+            y=outputs.numpy(force=True),
+            y_pred=labels.numpy(force=True),
+            weights=training_parameters.loss_weights,
         )
+        step_metrics_list.append(step_metrics)
+
+        mlflow.log_metrics(
+            step_metrics.to_dict(
+                split_labels=True,
+                labels=training_parameters.label_names,
+                prefix="train",
+            ),
+            step=epoch_len * epoch + step,
+        )
+        del loss
 
         del outputs
         del labels
 
         clear_memory()
 
-    # Calculate metrics and log progress for this epoch
-    epoch_loss /= step
+    epoch_metrics = EpochMetrics.from_step_metrics(step_metrics_list)
 
-    metrics_to_log, _ = get_metrics_to_log(
+    metrics_to_log, best_epoch = get_metrics_to_log(
         epoch + 1,
         "train",
-        training_objects,
         training_parameters,
-        epoch_loss=epoch_loss,
+        **epoch_metrics.to_dict(),
     )
+
     mlflow.log_metrics(
         metrics_to_log,
         step=epoch + 1,
     )
+    return epoch_metrics, step_metrics_list, best_epoch
 
 
 def validate(
@@ -371,17 +395,18 @@ def validate(
     epoch: int,
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
-) -> None:
+) -> tuple[EpochMetrics, list[StepMetrics], bool]:
     training_objects.model.eval()
-    epoch_loss = 0
     epoch_len = int(
         np.ceil(
             training_parameters.total_validation_data
             / training_parameters.validation_batch_size
         )
     )
+    step_metrics_list: list[StepMetrics] = []
     with torch.no_grad():
         outputs: tuple[typing.Any] | None = None
+        step = 1
         for step, data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
             desc=f"Epoch {epoch + 1} validation",
@@ -401,50 +426,49 @@ def validate(
                 loss = training_objects.loss_function(outputs, labels)
 
             mlflow.log_metric("val_loss", loss.item(), step=epoch_len * epoch + step)
-            epoch_loss += loss
 
-            outputs = [
-                training_objects.post_val_transform(_) for _ in decollate_batch(outputs)
-            ]
-
-            labels = [
-                training_objects.post_val_label_transform(_)
-                for _ in decollate_batch(labels)
-            ]
-
-            # Calculate metrics for this step
-            calculate_batch_metrics(
-                outputs,
-                labels,
-                metrics_dict=training_objects.val_metrics,
-            )
             del images
-            del labels
-            del outputs
+
+            step_metrics = StepMetrics.calculate_metrics(
+                loss=loss.item(),  # type: ignore
+                y=outputs.numpy(force=True),
+                y_pred=labels.numpy(force=True),
+                weights=training_parameters.loss_weights,
+            )
+            step_metrics_list.append(step_metrics)
+
+            mlflow.log_metrics(
+                step_metrics.to_dict(
+                    split_labels=True,
+                    labels=training_parameters.label_names,
+                    prefix="train",
+                ),
+                step=epoch_len * epoch + step,
+            )
             del loss
+
+            del outputs
+            del labels
             clear_memory()
 
-        # Calculate metrics and log progress for this epoch
-        epoch_loss /= step
+        epoch_metrics = EpochMetrics.from_step_metrics(step_metrics_list)
 
         metrics_to_log, best_epoch = get_metrics_to_log(
             epoch + 1,
             "val",
-            training_objects,
             training_parameters,
-            epoch_loss=epoch_loss,
+            **epoch_metrics.to_dict(),
         )
 
         if best_epoch:
             torch.save(training_objects.model.state_dict(), model_path)
-            mlflow.pytorch.log_model(
-                training_objects.model,
-                get_model_artifact_path(epoch + 1),
-                signature=model_signature,
-                pip_requirements=[
-                    f"-r {Path(__file__).absolute().parent.parent / 'requirements.txt'}"
-                ],
-            )
+            if model_signature is not None:
+                mlflow.pytorch.log_model(
+                    training_objects.model,
+                    name=get_model_artifact_path(epoch + 1),
+                    signature=model_signature,
+                    pip_requirements=pip_requirements,
+                )
             _logger.info(f"Saved new best metric model: {model_path}")
 
         mlflow.log_metrics(
@@ -452,42 +476,25 @@ def validate(
             step=epoch + 1,
         )
 
+    return epoch_metrics, step_metrics_list, best_epoch
+
 
 def get_metrics_to_log(
     epoch: int,
     stage: typing.Literal["train", "val"],
-    training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
-    epoch_loss: float | None = None,
-    **additional_metrics: float,
+    **epoch_metrics: float,
 ) -> tuple[dict[str, float], bool]:
-    epoch_metrics: dict[str, float] = {**additional_metrics}
-    for metric_name, (
-        metric_fn,
-        metric_values,
-    ) in getattr(training_objects, f"{stage}_metrics").items():
-        if isinstance(metric_fn, Cumulative):
-            epoch_metrics[metric_name] = metric_fn.aggregate().numpy(force=True)
-            metric_fn.reset()
-        elif isinstance(metric_values, list):
-            epoch_metrics[metric_name] = np.mean(metric_values)  # type: ignore[assignment]
-
-    if epoch_loss is not None:
-        epoch_metrics["epoch_loss"] = epoch_loss
-
-        _logger.info(f"Epoch {epoch} {stage} average loss: {epoch_loss:.4f}")
-
     # Calculate mean metric
-    _ = np.asarray(
+    epoch_metrics["mean_of_key_metrics"] = np.mean(
         tuple(
             epoch_metrics[k]
             for k in getattr(training_parameters, f"key_{stage}_metrics")
         )
-    )
-    epoch_metrics["mean_of_key_metrics"] = _.mean()
+    ).item()
 
     best_epoch = training_parameters.update_metrics(
-        epoch=epoch, metrics_dict=epoch_metrics, stage=stage
+        epoch=epoch, metrics=epoch_metrics, stage=stage
     )
 
     metrics_to_log: dict[str, float] = {}
@@ -514,13 +521,14 @@ def submit_images_to_mlflow(
     max_dims: tuple[int, int] = (512, 512),
     timestamp: int | None = None,
     log_unlabelled: bool = False,
-    background_labelled: bool = False,
+    separate_background: bool = False,
 ) -> None:
     _logger.debug("Sumbitting images to MLFlow")
-    colours = ["none", "gray", "orange", "green", "red", "yellow"]
-    if not background_labelled:
-        colours = colours[1:]
-
+    colours: list[tuple[int, int, int] | str] = [
+        tuple((np.asarray(_tab10(_)[:3]) * 255).astype(int).tolist()) for _ in range(5)
+    ]
+    if separate_background:
+        colours.insert(0, "none")
     for img, label, pred in zip(images, labels, predictions):
         img = img.to("cpu", copy=True)
         label = label.to("cpu", torch.bool, copy=True)

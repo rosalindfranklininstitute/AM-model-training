@@ -98,7 +98,7 @@ def plot_learning_rates(
     training_data, validation_data = setup.create_datasets(
         df,
         image_size=image_size,
-        validation_split=0.2,
+        validation_split=0.15,
         # dataset_type=CacheDataset,
     )
     _logger.info("Datasets loaded")
@@ -112,7 +112,7 @@ def plot_learning_rates(
         num_channels=3,
         label_names=label_names[1 - int(include_background) :],
         input_image_shape=(image_size, image_size),
-        learning_rate=1e-3,
+        learning_rate=1e-5,
         best_metric="mean_of_key_metrics",
         key_train_metrics=[
             # "mean_iou",
@@ -145,9 +145,9 @@ def plot_learning_rates(
     )
     loss_kwargs.update(
         {
-            "num_classes": training_parameters.num_classes,
-            # + 1
-            # - int(include_background),
+            "num_classes": training_parameters.num_classes
+            + 1
+            - int(include_background),
             "include_background": training_parameters.include_background,
         }
     )

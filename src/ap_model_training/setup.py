@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 import typing
 from dataclasses import dataclass, field, InitVar, asdict
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -30,11 +31,47 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger("adaptive_milling_training")
 
 
+def create_dataset(
+    input_data: NDArray[np.str_] | pd.DataFrame | Sequence,
+    image_size: int,
+    augmentations: bool,
+    *,
+    pad: bool = True,
+    rgb: bool = True,
+    dataset_type: type[data.Dataset] = data.Dataset,
+    **transform_kwargs: typing.Any,
+) -> data.Dataset:
+    if isinstance(input_data, np.ndarray):
+        datalist = [
+            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
+        ]
+    elif isinstance(input_data, pd.DataFrame):
+        datalist = input_data.to_dict(orient="records")
+    elif isinstance(input_data, Sequence):
+        datalist = input_data
+    else:
+        raise TypeError(f"Unsupported data type '{type(data)}'")
+    return dataset_type(
+        data=datalist,
+        transform=transforms.Compose(
+            get_transform_list(
+                image_size,
+                augmentations=augmentations,
+                pad=pad,
+                rgb=rgb,
+                **transform_kwargs,
+            )
+        ),
+    )
+
+
 def create_datasets(
     input_data: NDArray[np.str_] | pd.DataFrame,
     image_size: int,
     validation_split: float = 0.2,
     *,
+    pad: bool = True,
+    rgb: bool = True,
     dataset_type: type[data.Dataset] = data.Dataset,
     **transform_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
@@ -50,33 +87,28 @@ def create_datasets(
         datalist,
         ratios=(1 - validation_split, validation_split),
         num_partitions=2,
+        seed=42,
         shuffle=True,
     )
 
     return (
-        dataset_type(
-            data=train,
-            transform=transforms.Compose(
-                get_transform_list(
-                    image_size,
-                    augmentations=True,
-                    pad=True,
-                    rgb=True,
-                    **transform_kwargs,
-                )
-            ),
+        create_dataset(
+            train,
+            image_size=image_size,
+            augmentations=True,
+            pad=pad,
+            rgb=rgb,
+            dataset_type=dataset_type,
+            **transform_kwargs,
         ),
-        dataset_type(
-            data=validate,
-            transform=transforms.Compose(
-                get_transform_list(
-                    image_size,
-                    augmentations=False,
-                    pad=True,
-                    rgb=True,
-                    **transform_kwargs,
-                )
-            ),
+        create_dataset(
+            validate,
+            image_size=image_size,
+            augmentations=False,
+            pad=pad,
+            rgb=rgb,
+            dataset_type=dataset_type,
+            **transform_kwargs,
         ),
     )
 
@@ -114,6 +146,7 @@ class TrainingParameters:
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)
     include_background: bool = False
+    val_interval: int = 2
 
     def __post_init__(self):
         self.current_metrics = {"train": {}, "val": {}}
@@ -122,10 +155,11 @@ class TrainingParameters:
     def update_metrics(
         self,
         epoch: int,
-        metrics_dict: Mapping[str, float],
+        metrics: Mapping[str, float],
         stage: typing.Literal["train", "val"],
     ) -> bool:
         is_best = False
+        metrics_dict = dict(metrics)
         metrics_dict["epoch"] = epoch
 
         self.current_metrics[stage] = metrics_dict
@@ -173,8 +207,8 @@ class TrainingObjects:
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
-    train_metrics: Mapping[str, tuple[metrics.Metric, list[float] | None]]
-    val_metrics: Mapping[str, tuple[metrics.Metric, list[float] | None]]
+    train_metrics: Mapping[str, tuple[list[float] | None]]
+    val_metrics: Mapping[str, tuple[list[float] | None]]
     grad_scaler: torch.GradScaler | None = None
     post_train_transform: transforms.Transform | Callable = lambda x: x
     post_train_label_transform: transforms.Transform | Callable = lambda x: x
@@ -185,10 +219,10 @@ class TrainingObjects:
     training_dataloader: data.Dataloader = field(init=False)
     validation_dataloader: data.Dataloader = field(init=False)
     # InitVars:
-    training_data_workers: InitVar[int] = 8
+    training_data_workers: InitVar[int] = 4
     validation_data_workers: InitVar[int] = 4
-    training_batch_size: InitVar[int] = 4
-    validation_batch_size: InitVar[int] = 1
+    training_batch_size: InitVar[int] = 2
+    validation_batch_size: InitVar[int] = 2
     check_loaders: InitVar[bool] = True
 
     def __post_init__(
@@ -239,7 +273,7 @@ def setup_training_objects(
         "mean_dice": (
             metrics.DiceMetric(
                 include_background=include_background,
-                reduction="mean_batch",
+                reduction="mean",
             ),
             None,
         ),
@@ -247,15 +281,11 @@ def setup_training_objects(
 
     val_metrics = {
         "mean_iou": (
-            metrics.MeanIoU(
-                include_background=include_background, reduction="mean_batch"
-            ),
+            metrics.MeanIoU(include_background=include_background, reduction="mean"),
             None,
         ),
         "mean_dice": (
-            metrics.DiceMetric(
-                include_background=include_background, reduction="mean_batch"
-            ),
+            metrics.DiceMetric(include_background=include_background, reduction="mean"),
             None,
         ),
     }
@@ -281,7 +311,7 @@ def setup_training_objects(
         [
             transforms.AsDiscrete(
                 argmax=True,
-                # to_onehot=num_classes,
+                to_onehot=num_classes,
                 # dim=1,
                 # keepdim=True,
                 # dtype=torch.long,
@@ -297,7 +327,7 @@ def setup_training_objects(
             # ArgMax(dim=1),
             transforms.AsDiscrete(
                 argmax=True,
-                # to_onehot=num_classes,
+                to_onehot=num_classes,
             ),
             # transforms.LabelToMask(labels_to_keep),
         ]
@@ -308,7 +338,7 @@ def setup_training_objects(
             # transforms.Activations(softmax=True),
             transforms.AsDiscrete(
                 argmax=True,
-                # to_onehot=num_classes,
+                to_onehot=num_classes,
             ),
             # transforms.LabelToMask(labels_to_keep),
         ]
@@ -326,7 +356,7 @@ def setup_training_objects(
     # grad_scaler = None
 
     training_batch_size = 6
-    validation_batch_size = 3
+    validation_batch_size = 1
 
     return TrainingObjects(
         training_data,
@@ -345,7 +375,7 @@ def setup_training_objects(
         post_val_label_transform=post_val_label_transform,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
-        training_data_workers=training_batch_size * 2,
+        training_data_workers=training_batch_size,
         validation_data_workers=validation_batch_size * 2,
         check_loaders=False,
         **kwargs,

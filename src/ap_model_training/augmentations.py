@@ -8,6 +8,7 @@ from torchvision.transforms.v2 import (
     functional as functional_transforms,
     InterpolationMode,
 )
+from torchvision.transforms import RandomResizedCrop
 from monai import data, transforms
 from monai.transforms.io.dictionary import LoadImaged
 from monai.transforms.spatial.dictionary import RandAffined, Rand2DElasticd
@@ -317,14 +318,14 @@ def get_transform_list(
     pad: bool = False,
 ) -> list[transforms.transform.MapTransform]:
     # preprocessing: normalise -> pad -> resize -> to_rgb
+    load = LoadImaged(
+        [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+        reader=data.image_reader.PILReader,
+        image_only=True,
+        ensure_channel_first=True,
+        reverse_indexing=False,
+    )
     preprocessing: list[transforms.transform.MapTransform] = [
-        LoadImaged(
-            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
-            reader=data.image_reader.PILReader,
-            image_only=True,
-            ensure_channel_first=True,
-            reverse_indexing=False,
-        ),
         NormaliseTransformd([MONAI_KEYS.IMAGE], clamp=(-1, 1)),
     ]
     if pad:
@@ -338,31 +339,42 @@ def get_transform_list(
         preprocessing.append(ToRGBTransformd([MONAI_KEYS.IMAGE]))
 
     if not augmentations:
-        return preprocessing
+        return [load, *preprocessing]
 
     return [
-        *preprocessing,
-        RandAffined(
-            [MONAI_KEYS.IMAGE],
-            scale_range=(0.95, 1.05),
-            translate_range=(
-                image_size * 0.05,
-                image_size * 0.05,
-            ),
+        load,
+        RandResizedCropd(
+            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+            size=(1024, 1536),
+            scale=(0.7, 1.0),
+            ratio=(1.5, 1.5),
             prob=0.3,
         ),
         RandGaussianSmoothd(
             [MONAI_KEYS.IMAGE], sigma_x=(3, 5), sigma_y=(3, 5), prob=0.3
         ),
-        RandGaussianSharpend(  # TODO: inspect how equivalent this is.
-            [MONAI_KEYS.IMAGE], prob=0.3
-        ),
-        Rand2DElasticd(  # TODO: inspect how equivalent this is.
-            [MONAI_KEYS.IMAGE],
-            spacing=(1, 1),
-            magnitude_range=(0, 45),
-            prob=0.2,
-        ),
+        *preprocessing,
+        # RandAffined(
+        #     [MONAI_KEYS.IMAGE],
+        #     scale_range=(0.95, 1.05),
+        #     translate_range=(
+        #         image_size * 0.05,
+        #         image_size * 0.05,
+        #     ),
+        #     prob=0.3,
+        # ),
+        # RandGaussianSmoothd(
+        #     [MONAI_KEYS.IMAGE], sigma_x=(3, 5), sigma_y=(3, 5), prob=0.3
+        # ),
+        # RandGaussianSharpend(  # TODO: inspect how equivalent this is.
+        #     [MONAI_KEYS.IMAGE], prob=0.3
+        # ),
+        # Rand2DElasticd(  # TODO: inspect how equivalent this is.
+        #     [MONAI_KEYS.IMAGE],
+        #     spacing=(1, 1),
+        #     magnitude_range=(0, 45),
+        #     prob=0.2,
+        # ),
     ]
 
 
@@ -485,3 +497,41 @@ class ToRGBTransformd(transforms.transform.MapTransform):
         axis_multiplier = np.min(image_size / image_shape_array)
         shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
         return (int(shape[0]), int(shape[1]))
+
+
+class RandResizedCropd(
+    transforms.transform.RandomizableTransform, transforms.transform.MapTransform
+):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        size: tuple[float, float],
+        scale: tuple[float, float] = (0.08, 1.0),
+        ratio: tuple[float, float] = (0.75, 1.3333333333333333),
+        interpolation: InterpolationMode = InterpolationMode.BILINEAR,
+        antialias: bool = True,
+        prob: float = 0.3,
+        allow_missing_keys: bool = False,
+    ) -> None:
+        transforms.transform.MapTransform.__init__(
+            self, keys, allow_missing_keys=allow_missing_keys
+        )
+        transforms.transform.MapTransform.__init__(self, keys, allow_missing_keys)
+        transforms.transform.RandomizableTransform.__init__(self, prob)
+        self._transform = RandomResizedCrop(
+            size=size,
+            scale=scale,
+            ratio=ratio,
+            interpolation=interpolation,
+            antialias=antialias,
+        )
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        self.randomize(None)
+        d = dict(data)
+        if self._do_transform:
+            for key in self.key_iterator(d):
+                d[key] = self._transform.forward(d[key])
+        return d

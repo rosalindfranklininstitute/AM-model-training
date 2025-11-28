@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import gc
-import sys
 import logging
 from pathlib import Path
 
@@ -13,7 +11,7 @@ import numpy as np
 from ap_model_training import run
 from ap_model_training.utils import MONAI_LOG_DIR
 
-_logger = logging.getLogger("adaptive_milling_training")
+_logger = logging.getLogger(__package__)
 _logger.propagate = False
 _logger.setLevel(logging.DEBUG)
 for _handler in _logger.handlers:
@@ -31,10 +29,11 @@ _logger.addHandler(_stream_handler)
 # Setup MLFlow
 mlflow.pytorch.autolog()
 port = 54598
-mlflow_uri = f"file://{MONAI_LOG_DIR}"
+# mlflow_uri = f"file://{MONAI_LOG_DIR}"
+mlflow_uri = f"http://localhost:{port}"
 _logger.info("Setting up mlflow with URI '%s'", mlflow_uri)
 mlflow.set_tracking_uri(mlflow_uri)
-mlflow.set_experiment("MONAI adaptive milling")
+mlflow.set_experiment("ap_model_training")
 print(
     f"Run the following command to start:\n$mlflow ui --backend-store-uri {mlflow_uri} --port {port}\nThen navigate to:\nhttp://127.0.0.1:{port}"
 )
@@ -47,10 +46,12 @@ _logger.addHandler(_file_handler)
 
 
 # Input file paths
-test_csv = "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/test.csv"
 all_files_csv = (
-    "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files.csv"
+    "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files4.csv"
 )
+train_csv = "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/train.csv"
+validate_csv = "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/val.csv"
+
 
 try:
     dist_matrix = np.asarray(
@@ -64,39 +65,36 @@ try:
         ],
         dtype=np.float32,
     )
-    max_epochs = 120
-    frozen_fraction = 0.2
-    models_dir = Path(__file__).parent.parent / "models"
+    max_epochs = 100
+    frozen_fraction = 0.25
+    models_dir = Path.cwd() / "models"
     models_dir.mkdir(exist_ok=True)
 
     run.run_training(
-        # model_save_path = (
-        #     Path.cwd().parent
-        #     / "models"
-        #     / "250317_234235_all_files_smp_efficientnet_b4_unetplusplus.pth"
-        # )
-        # mlflow_run_id = "f6453abe173949bf8564c868fa1a0528"
-        # run.submit_validation_for_mlflow_run(
-        #     mlflow_run_id,
-        #     model_save_path,
-        #     116,
-        all_files_csv,
         models_dir=models_dir,
-        model_name="smp_efficientnet_b4_unet",  # "segresnet",
-        loss_name="diceloss",
-        learning_rate=1e-2,
-        epochs=max_epochs,
+        model_name="fpn",  # "segresnet",
+        # csv_path=all_files_csv,
+        training_csv_path=train_csv,
+        validation_csv_path=validate_csv,
+        validation_split=0.15,
+        validation_interval=1,
         image_size=768 * 2,
+        pad_images=False,
+        rgb_images=True,
+        loss_name="diceceloss",
+        learning_rate=1e-5,
+        epochs=max_epochs,
+        include_background=True,
         frozen_epochs=int(max_epochs * frozen_fraction),
         model_kwargs={"encoder_weights": "advprop", "pretrained": True},
         loss_kwargs={
-            "weights": (0.0, 1.0, 4.0, 3.5, 5.0, 2.0),
+            "weights": (1.0, 4.0, 3.0, 6.0, 2.0),
             "dist_matrix": dist_matrix,
         },
-        gpu_number=2,
-        lr_scheduler_name="cycliclr",
+        gpu_number=0,
+        lr_scheduler_name="onecyclelr",
         lr_scheduler_kwargs={
-            "max_lr": 1e-2,  # onecyclelr & cycliclr
+            "max_lr": 1e-3,  # onecyclelr & cycliclr
             "base_lr": 1e-6,  # cycliclr
             "mode": "triangular2",  # cycliclr
             "step_size_up": 1000,  # cycliclr

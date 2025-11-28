@@ -93,6 +93,7 @@ def dicefocalloss(
     if not include_background:
         weights = weights[1:]
     return losses.DiceFocalLoss(
+        other_act=torch.argmax,
         include_background=include_background,
         to_onehot_y=True,
         softmax=True,
@@ -124,7 +125,7 @@ def generalizeddicefocalloss(include_background: bool, weights: Tensor, **kwargs
     if not include_background:
         weights = weights[1:]
     return losses.GeneralizedDiceFocalLoss(
-        include_background=include_background,
+        # include_background=include_background,
         to_onehot_y=True,
         softmax=True,
         lambda_focal=0.5,
@@ -141,6 +142,14 @@ def generalizeddiceloss(include_background: bool, **kwargs):
     )
 
 
+def crossentropyloss(include_background: bool, weights: Tensor, **kwargs):
+    if not include_background:
+        weights = weights[1:]
+    return torch.nn.CrossEntropyLoss(
+        weight=weights, ignore_index=-100 if include_background else 0
+    )
+
+
 loss_creation_functions: dict[str, Callable] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
@@ -150,4 +159,5 @@ loss_creation_functions: dict[str, Callable] = {
     "generalized_wasserstein_dice_loss": generalized_wasserstein_dice_loss,
     "generalizeddicefocalloss": generalizeddicefocalloss,
     "generalizeddiceloss": generalizeddiceloss,
+    "crossentropyloss": crossentropyloss,
 }

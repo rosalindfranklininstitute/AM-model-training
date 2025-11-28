@@ -173,5 +173,8 @@ cython_debug/
 
 # tensorboard/mlflow logs
 /logs/
+/mlflow/
+/mlruns/
+/mlartifacts/
 
 /models/
