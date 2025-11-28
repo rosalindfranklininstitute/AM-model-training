@@ -51,6 +51,8 @@ def setup_training(
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     include_background: bool = False,
     gpu_number: int | None = None,
+    training_batch_size: int = 2,
+    validation_batch_size: int = 2,
 ) -> tuple[setup.TrainingObjects, setup.TrainingParameters]:
     if lr_scheduler_kwargs is None:
         lr_scheduler_kwargs = {}
@@ -121,8 +123,8 @@ def setup_training(
         total_training_data=len(training_data),
         total_validation_data=len(validation_data),
         foreground_labels=foreground_labels,
-        training_batch_size=2,
-        validation_batch_size=2,
+        training_batch_size=training_batch_size,
+        validation_batch_size=validation_batch_size,
         frozen_epochs=frozen_epochs,
         loss_weights=loss_kwargs.get("weights", None),
         include_background=include_background,
@@ -205,6 +207,8 @@ def run_training(
     include_background: bool = False,
     gpu_number: int | None = None,
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
+    training_batch_size: int = 2,
+    validation_batch_size: int = 2,
 ) -> None:
     models_dir = Path(models_dir)
 
@@ -243,6 +247,8 @@ def run_training(
         include_background=include_background,
         gpu_number=gpu_number,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
+        training_batch_size=training_batch_size,
+        validation_batch_size=validation_batch_size,
     )
     train.run(
         training_objects,

@@ -101,6 +101,8 @@ try:
             "step_size_down": 2000,  # cycliclr
             "warmup_steps": 5,  # warmupcosineschedule
         },
+        training_batch_size=1,
+        validation_batch_size=1,
     )
 finally:  # noqa: E722
     try:
