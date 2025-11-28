@@ -25,10 +25,9 @@ except ImportError:
 
 from monai.data import decollate_batch, Dataset
 from monai.transforms import Compose
-from monai.metrics import Cumulative
 from monai.utils import set_determinism
 
-from ap_model_training.utils import MONAI_KEYS, LABEL_NAMES
+from ap_model_training.utils import MONAI_KEYS
 from ap_model_training.metrics import StepMetrics, EpochMetrics
 
 if typing.TYPE_CHECKING:

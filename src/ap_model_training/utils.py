@@ -11,5 +11,3 @@ TENSORBOARD_LOG_DIR.mkdir(exist_ok=True)
 
 MONAI_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "mlflow"
 MONAI_LOG_DIR.mkdir(exist_ok=True)
-
-LABEL_NAMES = ("background", "GIS", "lamella", "crack", "vacuum")
