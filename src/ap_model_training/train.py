@@ -114,11 +114,9 @@ def run(
             input_array,
             training_objects.model(
                 torch.from_numpy(input_array).to(training_objects.device)
-            )
-            .detach()
-            .to("cpu")
-            .numpy(),
+            ).numpy(force=True),
         )
+        del input_array
 
         mlflow.log_params(training_parameters.asdict(include_metrics=False))
 
