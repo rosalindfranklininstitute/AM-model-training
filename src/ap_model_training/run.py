@@ -104,7 +104,7 @@ def setup_training(
     training_parameters = setup.TrainingParameters(
         num_classes=num_classes,
         num_channels=3,
-        label_names=label_names[1 - int(include_background) :],
+        label_names=label_names[2 - int(pad) - int(include_background) :],
         input_image_shape=(image_size, image_size),
         learning_rate=learning_rate,
         best_metric="mean_of_key_metrics",
