@@ -8,17 +8,14 @@ import numpy as np
 import pandas as pd
 
 import torch
-# from ignite import metrics as ignite_metrics
 
 from monai.utils.misc import first
-from monai import data, transforms, losses, optimizers, metrics, inferers
-# from monai.handlers import (
-#     from_engine,
-# )
+from monai import data, transforms, losses, optimizers, inferers
 
 from ap_model_training.schedulers import lr_scheduler_creation_functions
 from ap_model_training.augmentations import get_transform_list
 from ap_model_training.utils import MONAI_KEYS
+from ap_model_training.metrics import Metrics
 
 
 if typing.TYPE_CHECKING:
@@ -207,13 +204,11 @@ class TrainingObjects:
     loss_function: losses._Loss
     optimizer: torch.optim.Optimizer
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
-    train_metrics: Mapping[str, tuple[list[float] | None]]
-    val_metrics: Mapping[str, tuple[list[float] | None]]
+    train_metrics: Metrics
+    val_metrics: Metrics
     grad_scaler: torch.GradScaler | None = None
     post_train_transform: transforms.Transform | Callable = lambda x: x
-    post_train_label_transform: transforms.Transform | Callable = lambda x: x
     post_val_transform: transforms.Transform | Callable = lambda x: x
-    post_val_label_transform: transforms.Transform | Callable = lambda x: x
     training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     training_dataloader: data.Dataloader = field(init=False)
@@ -254,7 +249,6 @@ def setup_training_objects(
     model: torch.nn.Module,
     loss_function: losses._Loss,
     learning_rate: float = 1e-4,
-    include_background: bool = True,
     lr_scheduler_name: str = "onecyclelr",
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     **kwargs: typing.Any,
@@ -262,85 +256,25 @@ def setup_training_objects(
     if lr_scheduler_kwargs is None:
         lr_scheduler_kwargs = {}
 
-    train_metrics = {
-        "mean_iou": (
-            metrics.MeanIoU(
-                include_background=include_background,
-                reduction="mean",
-            ),
-            None,
-        ),
-        "mean_dice": (
-            metrics.DiceMetric(
-                include_background=include_background,
-                reduction="mean",
-            ),
-            None,
-        ),
-    }
+    train_metrics = Metrics(device=device, num_classes=num_classes)
 
-    val_metrics = {
-        "mean_iou": (
-            metrics.MeanIoU(include_background=include_background, reduction="mean"),
-            None,
-        ),
-        "mean_dice": (
-            metrics.DiceMetric(include_background=include_background, reduction="mean"),
-            None,
-        ),
-    }
-
-    labels_to_keep = tuple(range(1 - int(include_background), num_classes + 1))
+    val_metrics = Metrics(device=device, num_classes=num_classes)
 
     post_train_transform = transforms.Compose(
         [
-            # transforms.Activations(softmax=True),
             transforms.AsDiscrete(
                 argmax=True,
-                to_onehot=num_classes,
-                # dim=1,
-                # keepdim=True,
-                # dtype=torch.long,
+                dtype=torch.long,
             ),
-            # transforms.LabelToMask(labels_to_keep),
-            # transforms.EnsureType(dtype=torch.long),
-        ]
-    )
-
-    post_train_label_transform = transforms.Compose(
-        [
-            transforms.AsDiscrete(
-                argmax=True,
-                to_onehot=num_classes,
-                # dim=1,
-                # keepdim=True,
-                # dtype=torch.long,
-            ),
-            # transforms.LabelToMask(labels_to_keep),
-            # transforms.EnsureType(dtype=torch.long),
         ]
     )
 
     post_val_transform = transforms.Compose(
         [
-            # transforms.Activations(softmax=True),
-            # ArgMax(dim=1),
             transforms.AsDiscrete(
                 argmax=True,
-                to_onehot=num_classes,
+                dtype=torch.long,
             ),
-            # transforms.LabelToMask(labels_to_keep),
-        ]
-    )
-
-    post_val_label_transform = transforms.Compose(
-        [
-            # transforms.Activations(softmax=True),
-            transforms.AsDiscrete(
-                argmax=True,
-                to_onehot=num_classes,
-            ),
-            # transforms.LabelToMask(labels_to_keep),
         ]
     )
 
@@ -370,9 +304,7 @@ def setup_training_objects(
         train_metrics=train_metrics,
         val_metrics=val_metrics,
         post_train_transform=post_train_transform,
-        post_train_label_transform=post_train_label_transform,
         post_val_transform=post_val_transform,
-        post_val_label_transform=post_val_label_transform,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
         training_data_workers=training_batch_size,

@@ -109,12 +109,12 @@ def setup_training(
         learning_rate=learning_rate,
         best_metric="mean_of_key_metrics",
         key_train_metrics=[
-            "weighted_mean_iou",
-            "weighted_mean_dice",
+            "epoch_weighted_average_iou",
+            "epoch_weighted_average_dice",
         ],
         key_val_metrics=[
-            "weighted_mean_iou",
-            "weighted_mean_dice",
+            "epoch_weighted_average_iou",
+            "epoch_weighted_average_dice",
         ],
         max_epochs=epochs,
         model_path=model_save_path,
@@ -178,7 +178,6 @@ def setup_training(
         num_classes=num_classes,
         loss_function=loss_function,
         learning_rate=training_parameters.learning_rate,
-        include_background=include_background,
         lr_scheduler_name=lr_scheduler_name,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
     )

@@ -156,8 +156,8 @@ def run(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
-                    model_path=model_path.with_suffix(
-                        f"_epoch{epoch:03}{model_path.suffix}"
+                    model_path=model_path.with_stem(
+                        f"{model_path.stem}_epoch{epoch:03}"
                     ),
                     model_signature=model_signature,
                 )
@@ -207,7 +207,7 @@ def run(
                 )
                 for _ in train_epoch_metrics_list
             ]
-        ).to_csv(model_path.with_suffix("_train_metrics.csv"))
+        ).to_csv(model_path.with_name(f"{model_path.stem}_train_metrics.csv"))
 
         pd.DataFrame(
             [
@@ -217,7 +217,7 @@ def run(
                 )
                 for _ in val_epoch_metrics_list
             ]
-        ).to_csv(model_path.with_suffix("_val_metrics.csv"))
+        ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
 
         best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
         submit_validation_images_to_mflow(
@@ -293,6 +293,8 @@ def train(
     training_parameters: TrainingParameters,
     epoch: int,
 ) -> tuple[EpochMetrics, list[StepMetrics], bool]:
+    metrics = training_objects.train_metrics
+    metrics.reset()
     training_objects.model.train()
     epoch_len = int(
         np.ceil(
@@ -344,25 +346,22 @@ def train(
         print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
 
         del images
-
-        step_metrics = StepMetrics.calculate_metrics(
-            loss=loss.item(),  # type: ignore
-            y=np.asarray(
+        _logger.info("Starting step metric calulcations")
+        step_metrics = metrics.get_step_metrics(
+            loss=loss.item(),
+            y=labels,
+            y_pred=torch.stack(
                 [
-                    training_objects.post_train_label_transform(_).detach().cpu()
-                    for _ in decollate_batch(labels)
-                ]
-            ),
-            y_pred=np.asarray(
-                [
-                    training_objects.post_train_transform(_).detach().cpu()
+                    training_objects.post_train_transform(_)
                     for _ in decollate_batch(outputs)
-                ]
+                ],
             ),
             weights=training_parameters.loss_weights,
+            device=training_objects.device,
         )
         step_metrics_list.append(step_metrics)
-
+        _logger.info("Completed step metric calulcations")
+        _logger.info("Logging step metric calulcations")
         mlflow.log_metrics(
             step_metrics.to_dict(
                 split_labels=True,
@@ -371,6 +370,7 @@ def train(
             ),
             step=epoch_len * epoch + step,
         )
+        _logger.info("Completed logging step metric calulcations")
         del loss
 
         del outputs
@@ -378,13 +378,15 @@ def train(
 
         clear_memory()
 
-    epoch_metrics = EpochMetrics.from_step_metrics(step_metrics_list)
-
+    epoch_metrics = metrics.get_epoch_metrics(
+        step_losses=[_.loss for _ in step_metrics_list]
+    )
+    metrics.reset()
     metrics_to_log, best_epoch = get_metrics_to_log(
         epoch + 1,
         "train",
         training_parameters,
-        **epoch_metrics.to_dict(),
+        **epoch_metrics.to_dict(prefix="epoch"),
     )
 
     mlflow.log_metrics(
@@ -401,6 +403,8 @@ def validate(
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
 ) -> tuple[EpochMetrics, list[StepMetrics], bool]:
+    metrics = training_objects.val_metrics
+    metrics.reset()
     training_objects.model.eval()
     epoch_len = int(
         np.ceil(
@@ -433,21 +437,17 @@ def validate(
 
             del images
 
-            step_metrics = StepMetrics.calculate_metrics(
-                loss=loss.item(),  # type: ignore
-                y=np.asarray(
+            step_metrics = metrics.get_step_metrics(
+                loss=loss.item(),
+                y=labels,
+                y_pred=torch.stack(
                     [
-                        training_objects.post_train_label_transform(_).detach().cpu()
-                        for _ in decollate_batch(labels)
-                    ]
-                ),
-                y_pred=np.asarray(
-                    [
-                        training_objects.post_train_transform(_).detach().cpu()
+                        training_objects.post_val_transform(_)
                         for _ in decollate_batch(outputs)
                     ]
                 ),
                 weights=training_parameters.loss_weights,
+                device=training_objects.device,
             )
             step_metrics_list.append(step_metrics)
 
@@ -465,8 +465,10 @@ def validate(
             del labels
             clear_memory()
 
-        epoch_metrics = EpochMetrics.from_step_metrics(step_metrics_list)
-
+        epoch_metrics = metrics.get_epoch_metrics(
+            step_losses=[_.loss for _ in step_metrics_list]
+        )
+        metrics.reset()
         metrics_to_log, best_epoch = get_metrics_to_log(
             epoch + 1,
             "val",

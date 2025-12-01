@@ -91,6 +91,7 @@ try:
             "weights": (1.0, 4.0, 3.0, 6.0, 2.0),
             "dist_matrix": dist_matrix,
         },
+        # cpu_only=True,
         gpu_number=0,
         lr_scheduler_name="onecyclelr",
         lr_scheduler_kwargs={
@@ -101,7 +102,7 @@ try:
             "step_size_down": 2000,  # cycliclr
             "warmup_steps": 5,  # warmupcosineschedule
         },
-        training_batch_size=1,
+        training_batch_size=6,
         validation_batch_size=1,
     )
 finally:  # noqa: E722

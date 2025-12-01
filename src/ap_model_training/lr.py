@@ -198,7 +198,6 @@ def plot_learning_rates(
                 loss_function=loss_function,
                 model=model,
                 num_classes=training_parameters.num_classes,
-                include_background=include_background,
                 lr_scheduler_kwargs=lr_scheduler_kwargs,
             )
 

@@ -1,77 +1,48 @@
 from __future__ import annotations
 import typing
+from statistics import mean
 from dataclasses import dataclass, field, fields, InitVar, asdict
-from collections.abc import Collection
 
-import numpy as np
-from sklearn.metrics import (
-    jaccard_score,
-    f1_score,
-    accuracy_score,
-    precision_score,
-    recall_score,
+import torch
+from torchmetrics.segmentation import DiceScore, MeanIoU
+from torchmetrics.classification import (
+    MulticlassAccuracy,
+    MulticlassPrecision,
+    MulticlassF1Score,
+    MulticlassRecall,
 )
 
 if typing.TYPE_CHECKING:
-    from numpy.typing import NDArray, ArrayLike
-
-
-def dice_score(
-    y_true: NDArray[np.integer[typing.Any]], y_pred: NDArray[np.integer[typing.Any]]
-) -> NDArray[np.float64]:
-    smooth = 1.0
-    intersection = np.sum(y_true * y_pred, axis=0)
-    return (2.0 * intersection + smooth) / (
-        y_true.sum(axis=0) + y_pred.sum(axis=0) + smooth
-    )
+    from collections.abc import Collection, Sequence, Iterable
 
 
 @dataclass
 class EpochMetrics:
     loss: float
 
-    iou: NDArray[np.float64]
+    iou: torch.Tensor
     mean_iou: float
     weighted_average_iou: float | None
 
-    dice: NDArray[np.float64]
+    dice: torch.Tensor
     mean_dice: float
     weighted_average_dice: float | None
 
-    f1: NDArray[np.float64]
+    f1: torch.Tensor
     mean_f1: float
     weighted_average_f1: float | None
 
-    accuracy: NDArray[np.float64]
+    accuracy: torch.Tensor
     mean_accuracy: float
     weighted_average_accuracy: float | None
 
-    precision: NDArray[np.float64]
+    precision: torch.Tensor
     mean_precision: float
     weighted_average_precision: float | None
 
-    recall: NDArray[np.float64]
+    recall: torch.Tensor
     mean_recall: float
     weighted_average_recall: float | None
-
-    @classmethod
-    def from_step_metrics(cls, step_metrics: list[StepMetrics]) -> "EpochMetrics":
-        d: dict[str, NDArray[np.float64] | float | None] = {}
-        for f in fields(StepMetrics):
-            v = np.mean(
-                tuple(
-                    getattr(_, f.name)
-                    for _ in step_metrics
-                    if getattr(_, f.name) is not None
-                )
-            )
-            if not isinstance(v, np.ndarray):
-                if np.isnan(v):
-                    v = None
-                else:
-                    v = v.item()
-            d[f.name] = v
-        return cls(**d)  # type: ignore
 
     def to_dict(
         self,
@@ -85,9 +56,9 @@ class EpochMetrics:
         elif labels is None:
             raise ValueError("No labels have been supplied")
         for k in tuple(d.keys()):
-            v = d.pop(k)
-            if isinstance(v, np.ndarray):
-                v = v.tolist()
+            v = d[k]
+            if isinstance(v, torch.Tensor) and len(v) > 1:
+                v = d.pop(k).numpy(force=True).tolist()
                 if len(v) != len(labels):
                     raise ValueError("An incorrect number of labels have been supplied")
                 for i, label in enumerate(labels):
@@ -100,108 +71,56 @@ class EpochMetrics:
 
 @dataclass
 class StepMetrics:
-    weights: InitVar[ArrayLike | None]
+    weights: InitVar[Sequence[float] | None]
+    device: InitVar[torch.device | None]
 
     loss: float
 
-    iou: NDArray[np.float64]
+    iou: torch.Tensor
     mean_iou: float = field(init=False)
     weighted_average_iou: float | None = field(init=False, default=None)
 
-    dice: NDArray[np.float64]
+    dice: torch.Tensor
     mean_dice: float = field(init=False)
     weighted_average_dice: float | None = field(init=False, default=None)
 
-    f1: NDArray[np.float64]
+    f1: torch.Tensor
     mean_f1: float = field(init=False)
     weighted_average_f1: float | None = field(init=False, default=None)
 
-    accuracy: NDArray[np.float64]
+    accuracy: torch.Tensor
     mean_accuracy: float = field(init=False)
     weighted_average_accuracy: float | None = field(init=False, default=None)
 
-    precision: NDArray[np.float64]
+    precision: torch.Tensor
     mean_precision: float = field(init=False)
     weighted_average_precision: float | None = field(init=False, default=None)
 
-    recall: NDArray[np.float64]
+    recall: torch.Tensor
     mean_recall: float = field(init=False)
     weighted_average_recall: float | None = field(init=False, default=None)
 
-    def __post_init__(self, weights: ArrayLike | None):
+    def __post_init__(
+        self, weights: Sequence[float] | None, device: torch.device | None
+    ) -> None:
+        if weights is None or device is None:
+            weights_tensor = None
+        else:
+            weights_tensor = torch.Tensor(weights).to(device)
+
         for f in fields(self):
-            if not f.init:
+            if not f.init or f.name == "loss":
                 continue
             value = getattr(self, f.name)
-            mean = np.mean(value)
+            mean = torch.mean(value)
             object.__setattr__(self, f"mean_{f.name}", mean.item())
-            if weights is not None:
-                weighted_mean = np.sum(np.multiply(value, weights)) / np.sum(weights)
-                object.__setattr__(self, f"mean_{f.name}", weighted_mean.item())
-
-    @classmethod
-    def calculate_metrics(
-        cls,
-        loss: float,
-        y: NDArray[np.integer[typing.Any]],
-        y_pred: NDArray[np.integer[typing.Any]],
-        weights: ArrayLike | None,
-    ) -> "StepMetrics":
-        # Flatten batches but keep labels separate (and labels on axis 1)
-        flattened_y = y.swapaxes(0, 1).reshape((y.shape[1], -1)).swapaxes(0, 1)
-        flattened_y_pred = (
-            y_pred.swapaxes(0, 1).reshape((y.shape[1], -1)).swapaxes(0, 1)
-        )
-
-        iou = np.asarray(
-            jaccard_score(
-                y_true=flattened_y,
-                y_pred=flattened_y_pred,
-                average=None,
-                zero_division=0.0,
-            )
-        )
-        dice = np.asarray(dice_score(y_true=flattened_y, y_pred=flattened_y_pred))
-        f1 = np.asarray(
-            f1_score(
-                y_true=flattened_y,
-                y_pred=flattened_y_pred,
-                average=None,
-                zero_division=0.0,
-            )
-        )
-        accuracy = np.asarray(
-            [
-                accuracy_score(y_true=flattened_y[:, _], y_pred=flattened_y_pred[:, _])
-                for _ in range(y.shape[1])
-            ]
-        )
-        precision = np.asarray(
-            precision_score(
-                y_true=flattened_y,
-                y_pred=flattened_y_pred,
-                average=None,
-                zero_division=0.0,
-            )
-        )
-        recall = np.asarray(
-            recall_score(
-                y_true=flattened_y,
-                y_pred=flattened_y_pred,
-                average=None,
-                zero_division=0.0,
-            )
-        )
-        return cls(
-            weights=weights,
-            loss=loss,
-            iou=iou,
-            dice=dice,
-            f1=f1,
-            accuracy=accuracy,
-            precision=precision,
-            recall=recall,
-        )
+            if weights_tensor is not None:
+                weighted_mean = torch.sum(torch.mul(value, weights_tensor)) / torch.sum(
+                    weights_tensor
+                )
+                object.__setattr__(
+                    self, f"weighted_average_{f.name}", weighted_mean.item()
+                )
 
     def to_dict(
         self,
@@ -215,9 +134,9 @@ class StepMetrics:
         elif labels is None:
             raise ValueError("No labels have been supplied")
         for k in tuple(d.keys()):
-            v = d.pop(k)
-            if isinstance(v, np.ndarray) and len(v) > 1:
-                v = v.tolist()
+            v = d[k]
+            if isinstance(v, torch.Tensor) and len(v) > 1:
+                v = d.pop(k).numpy(force=True).tolist()
                 if len(v) != len(labels):
                     raise ValueError("An incorrect number of labels have been supplied")
                 for i, label in enumerate(labels):
@@ -226,3 +145,62 @@ class StepMetrics:
             for k in tuple(d.keys()):
                 d[f"{prefix}_{k}"] = d.pop(k)
         return d
+
+
+@dataclass
+class Metrics:
+    device: InitVar[torch.device]
+    num_classes: InitVar[int]
+    iou: MeanIoU = field(init=False)
+    dice: DiceScore = field(init=False)
+    f1: MulticlassF1Score = field(init=False)
+    accuracy: MulticlassAccuracy = field(init=False)
+    precision: MulticlassPrecision = field(init=False)
+    recall: MulticlassRecall = field(init=False)
+
+    def __post_init__(self, device: torch.device, num_classes: int) -> None:
+        self.iou = MeanIoU(
+            num_classes=num_classes, per_class=True, input_format="index"
+        ).to(device)
+        self.dice = DiceScore(
+            num_classes=num_classes, average="none", input_format="index"
+        ).to(device)
+        self.f1 = MulticlassF1Score(num_classes=num_classes, average="none").to(device)
+        self.accuracy = MulticlassAccuracy(num_classes=num_classes, average="none").to(
+            device
+        )
+        self.precision = MulticlassPrecision(
+            num_classes=num_classes, average="none"
+        ).to(device)
+        self.recall = MulticlassRecall(num_classes=num_classes, average="none").to(
+            device
+        )
+
+    def get_step_metrics(
+        self,
+        loss: float,
+        y: torch.Tensor,
+        y_pred: torch.Tensor,
+        weights: Sequence[float] | None = None,
+        device: torch.device | None = None,
+    ) -> StepMetrics:
+        kwargs = {
+            f.name: getattr(self, f.name).forward(y_pred, y) for f in fields(self)
+        }
+        return StepMetrics(
+            weights=weights,
+            device=device,
+            loss=loss,
+            **kwargs,
+        )
+
+    def get_epoch_metrics(self, step_losses: Iterable[float]) -> EpochMetrics:
+        kwargs = {f.name: getattr(self, f.name).compute() for f in fields(self)}
+        return EpochMetrics(
+            loss=float(mean(step_losses)),
+            **kwargs,
+        )
+
+    def reset(self) -> None:
+        for f in fields(self):
+            getattr(self, f.name).reset()
