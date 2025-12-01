@@ -58,12 +58,12 @@ class MetricsOutput:
             if not f.init or f.name == "loss":
                 continue
             value = getattr(self, f.name)
-            mean = torch.mean(value)
+            mean = torch.nanmean(value)
             object.__setattr__(self, f"mean_{f.name}", mean.item())
             if weights_tensor is not None:
-                weighted_mean = torch.sum(torch.mul(value, weights_tensor)) / torch.sum(
-                    weights_tensor
-                )
+                weighted_mean = torch.nansum(
+                    torch.mul(value, weights_tensor)
+                ) / torch.sum(weights_tensor)
                 object.__setattr__(
                     self, f"weighted_average_{f.name}", weighted_mean.item()
                 )
