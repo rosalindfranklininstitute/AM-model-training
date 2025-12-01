@@ -75,18 +75,19 @@ class MetricsOutput:
         prefix: str | None = None,
     ) -> dict[str, typing.Any]:
         d = asdict(self)
-        if not split_labels:
-            return d
-        elif labels is None:
-            raise ValueError("No labels have been supplied")
-        for k in tuple(d.keys()):
-            v = d[k]
-            if isinstance(v, torch.Tensor) and len(v) > 1:
-                v = d.pop(k).numpy(force=True).tolist()
-                if len(v) != len(labels):
-                    raise ValueError("An incorrect number of labels have been supplied")
-                for i, label in enumerate(labels):
-                    d[f"{label}_{k}"] = float(v[i])
+        if split_labels:
+            if labels is None:
+                raise ValueError("No labels have been supplied")
+            for k in tuple(d.keys()):
+                v = d[k]
+                if isinstance(v, torch.Tensor) and len(v) > 1:
+                    v = d.pop(k).numpy(force=True).tolist()
+                    if len(v) != len(labels):
+                        raise ValueError(
+                            "An incorrect number of labels have been supplied"
+                        )
+                    for i, label in enumerate(labels):
+                        d[f"{label}_{k}"] = float(v[i])
         if prefix is not None:
             for k in tuple(d.keys()):
                 d[f"{prefix}_{k}"] = d.pop(k)

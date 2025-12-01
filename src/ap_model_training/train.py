@@ -379,14 +379,20 @@ def train(
         clear_memory()
 
     epoch_metrics = metrics.get_epoch_metrics(
-        step_losses=[_.loss for _ in step_metrics_list]
+        step_losses=[_.loss for _ in step_metrics_list],
+        weights=training_parameters.loss_weights,
+        device=training_objects.device,
     )
     metrics.reset()
     metrics_to_log, best_epoch = get_metrics_to_log(
         epoch + 1,
         "train",
         training_parameters,
-        **epoch_metrics.to_dict(prefix="epoch"),
+        **epoch_metrics.to_dict(
+            split_labels=True,
+            labels=training_parameters.label_names,
+            prefix="epoch",
+        ),
     )
 
     mlflow.log_metrics(
@@ -466,14 +472,20 @@ def validate(
             clear_memory()
 
         epoch_metrics = metrics.get_epoch_metrics(
-            step_losses=[_.loss for _ in step_metrics_list]
+            step_losses=[_.loss for _ in step_metrics_list],
+            weights=training_parameters.loss_weights,
+            device=training_objects.device,
         )
         metrics.reset()
         metrics_to_log, best_epoch = get_metrics_to_log(
             epoch + 1,
             "val",
             training_parameters,
-            **epoch_metrics.to_dict(),
+            **epoch_metrics.to_dict(
+                split_labels=True,
+                labels=training_parameters.label_names,
+                prefix="epoch",
+            ),
         )
 
         if best_epoch:
