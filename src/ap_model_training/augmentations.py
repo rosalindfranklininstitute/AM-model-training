@@ -8,7 +8,7 @@ from torchvision.transforms.v2 import (
     functional as functional_transforms,
     InterpolationMode,
 )
-from torchvision.transforms import RandomResizedCrop
+from torchvision.transforms import RandomResizedCrop, GaussianBlur
 from monai import data, transforms
 from monai.transforms.io.dictionary import LoadImaged
 from monai.transforms.spatial.dictionary import RandAffined, Rand2DElasticd
@@ -23,7 +23,7 @@ from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
-    from collections.abc import Mapping, Hashable, Collection
+    from collections.abc import Mapping, Hashable, Collection, Sequence
 
     KeysCollection = typing.Union[Collection[Hashable], Hashable]
 
@@ -316,6 +316,7 @@ def get_transform_list(
     augmentations: bool,
     rgb: bool = True,
     pad: bool = False,
+    dog: bool = False,
 ) -> list[transforms.transform.MapTransform]:
     # preprocessing: normalise -> pad -> resize -> to_rgb
     load = LoadImaged(
@@ -338,6 +339,16 @@ def get_transform_list(
     )
     if rgb:
         preprocessing.append(ToRGBTransformd([MONAI_KEYS.IMAGE]))
+
+    if dog:
+        preprocessing.append(
+            DoGChannelsd(
+                [MONAI_KEYS.IMAGE],
+                kernel_size=64,
+                sigmas1=(image_size / 36, image_size / 16),
+                sigmas2=(image_size / 128, image_size / 64),
+            )
+        )
 
     if not augmentations:
         return [load, *preprocessing]
@@ -494,12 +505,38 @@ class ToRGBTransformd(transforms.transform.MapTransform):
     def _transform(self, image: torch.Tensor) -> torch.Tensor:
         return functional_transforms.grayscale_to_rgb(image)
 
-    @staticmethod
-    def _get_resize_shape(image, image_size: int) -> tuple[int, int]:
-        image_shape_array = np.asarray(image.shape[-2:])
-        axis_multiplier = np.min(image_size / image_shape_array)
-        shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
-        return (int(shape[0]), int(shape[1]))
+
+class DoGChannelsd(transforms.transform.MapTransform):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        kernel_size: int | Sequence[int],
+        sigmas1: tuple[float, float],
+        sigmas2: tuple[float, float],
+        allow_missing_keys: bool = False,
+    ) -> None:
+        super().__init__(keys, allow_missing_keys=allow_missing_keys)
+        self._g1_0 = GaussianBlur(kernel_size=kernel_size, sigma=sigmas1[0])
+        self._g1_1 = GaussianBlur(kernel_size=kernel_size, sigma=sigmas1[1])
+        self._g2_0 = GaussianBlur(kernel_size=kernel_size, sigma=sigmas2[0])
+        self._g2_1 = GaussianBlur(kernel_size=kernel_size, sigma=sigmas2[1])
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            d[key] = self._transform(d[key])
+        return d
+
+    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+        image[:, 0, ...] = self._g1_0.forward(image[:, 0, ...]) - self._g1_1.forward(
+            image[:, 0, ...]
+        )
+        image[:, 2, ...] = self._g2_0.forward(image[:, 2, ...]) - self._g2_1.forward(
+            image[:, 2, ...]
+        )
+        return image
 
 
 class RandResizedCropd(
