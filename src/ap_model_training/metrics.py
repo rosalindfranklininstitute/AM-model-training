@@ -15,62 +15,8 @@ from torchmetrics.classification import (
 if typing.TYPE_CHECKING:
     from collections.abc import Collection, Sequence, Iterable
 
-
 @dataclass
-class EpochMetrics:
-    loss: float
-
-    iou: torch.Tensor
-    mean_iou: float
-    weighted_average_iou: float | None
-
-    dice: torch.Tensor
-    mean_dice: float
-    weighted_average_dice: float | None
-
-    f1: torch.Tensor
-    mean_f1: float
-    weighted_average_f1: float | None
-
-    accuracy: torch.Tensor
-    mean_accuracy: float
-    weighted_average_accuracy: float | None
-
-    precision: torch.Tensor
-    mean_precision: float
-    weighted_average_precision: float | None
-
-    recall: torch.Tensor
-    mean_recall: float
-    weighted_average_recall: float | None
-
-    def to_dict(
-        self,
-        split_labels: bool = False,
-        labels: Collection[str] | None = None,
-        prefix: str | None = None,
-    ) -> dict[str, typing.Any]:
-        d = asdict(self)
-        if not split_labels:
-            return d
-        elif labels is None:
-            raise ValueError("No labels have been supplied")
-        for k in tuple(d.keys()):
-            v = d[k]
-            if isinstance(v, torch.Tensor) and len(v) > 1:
-                v = d.pop(k).numpy(force=True).tolist()
-                if len(v) != len(labels):
-                    raise ValueError("An incorrect number of labels have been supplied")
-                for i, label in enumerate(labels):
-                    d[f"{label}_{k}"] = float(v[i])
-        if prefix is not None:
-            for k in tuple(d.keys()):
-                d[f"{prefix}_{k}"] = d.pop(k)
-        return d
-
-
-@dataclass
-class StepMetrics:
+class MetricsOutput:
     weights: InitVar[Sequence[float] | None]
     device: InitVar[torch.device | None]
 
@@ -183,20 +129,27 @@ class Metrics:
         y_pred: torch.Tensor,
         weights: Sequence[float] | None = None,
         device: torch.device | None = None,
-    ) -> StepMetrics:
+    ) -> MetricsOutput:
         kwargs = {
             f.name: getattr(self, f.name).forward(y_pred, y) for f in fields(self)
         }
-        return StepMetrics(
+        return MetricsOutput(
             weights=weights,
             device=device,
             loss=loss,
             **kwargs,
         )
 
-    def get_epoch_metrics(self, step_losses: Iterable[float]) -> EpochMetrics:
+    def get_epoch_metrics(
+        self,
+        step_losses: Iterable[float],
+        weights: Sequence[float] | None = None,
+        device: torch.device | None = None,
+    ) -> MetricsOutput:
         kwargs = {f.name: getattr(self, f.name).compute() for f in fields(self)}
-        return EpochMetrics(
+        return MetricsOutput(
+            weights=weights,
+            device=device,
             loss=float(mean(step_losses)),
             **kwargs,
         )

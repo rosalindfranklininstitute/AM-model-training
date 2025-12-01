@@ -28,7 +28,7 @@ from monai.transforms import Compose
 from monai.utils import set_determinism
 
 from ap_model_training.utils import MONAI_KEYS
-from ap_model_training.metrics import StepMetrics, EpochMetrics
+from ap_model_training.metrics import MetricsOutput
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -292,7 +292,7 @@ def train(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
-) -> tuple[EpochMetrics, list[StepMetrics], bool]:
+) -> tuple[MetricsOutput, list[MetricsOutput], bool]:
     metrics = training_objects.train_metrics
     metrics.reset()
     training_objects.model.train()
@@ -302,7 +302,7 @@ def train(
             / training_parameters.training_batch_size
         )
     )
-    step_metrics_list: list[StepMetrics] = []
+    step_metrics_list: list[MetricsOutput] = []
     for step, batch_data in tqdm(
         enumerate(training_objects.training_dataloader, 1),
         desc=f"Epoch {epoch + 1} training",
@@ -402,7 +402,7 @@ def validate(
     epoch: int,
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
-) -> tuple[EpochMetrics, list[StepMetrics], bool]:
+) -> tuple[MetricsOutput, list[MetricsOutput], bool]:
     metrics = training_objects.val_metrics
     metrics.reset()
     training_objects.model.eval()
@@ -412,7 +412,7 @@ def validate(
             / training_parameters.validation_batch_size
         )
     )
-    step_metrics_list: list[StepMetrics] = []
+    step_metrics_list: list[MetricsOutput] = []
     with torch.no_grad():
         step = 1
         for step, data in tqdm(
