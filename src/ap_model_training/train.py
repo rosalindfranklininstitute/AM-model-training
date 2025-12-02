@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
+from torch.nn.functional import one_hot
 from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import draw_segmentation_masks
 import mlflow
@@ -257,9 +258,11 @@ def submit_validation_images_to_mflow(
     epoch: int,
 ) -> None:
     # Log images using the best val epoch model
+    model_path = Path(training_parameters.model_path)
     training_objects.model.load_state_dict(
         state_dict=torch.load(
-            training_parameters.model_path, map_location=training_objects.device
+            model_path.with_stem(f"{model_path.stem}_epoch{epoch:03}"),
+            map_location=training_objects.device,
         )
     )
     training_objects.model.eval()
@@ -286,20 +289,19 @@ def submit_validation_images_to_mflow(
                     images, training_objects.model
                 )
 
-            outputs = [
-                training_objects.post_val_transform(_) for _ in decollate_batch(outputs)
-            ]
-
-            labels = [
-                training_objects.post_val_label_transform(_)
-                for _ in decollate_batch(labels)
-            ]
+            outputs = torch.stack(
+                [
+                    training_objects.post_val_transform(_)
+                    for _ in decollate_batch(outputs)
+                ]
+            )
 
             submit_images_to_mlflow(
                 images,
                 labels,
                 outputs,
                 step=epoch + 1,
+                num_classes=training_parameters.num_classes,
                 timestamp=int(time.time()),
                 separate_background=training_parameters.include_background,
             )
@@ -547,20 +549,22 @@ def submit_images_to_mlflow(
     predictions: torch.Tensor | list[torch.Tensor],
     step: int,
     max_dims: tuple[int, int] = (512, 512),
+    num_classes: int = 5,
     timestamp: int | None = None,
     log_unlabelled: bool = False,
     separate_background: bool = False,
 ) -> None:
     _logger.debug("Sumbitting images to MLFlow")
     colours: list[tuple[int, int, int] | str] = [
-        tuple((np.asarray(_tab10(_)[:3]) * 255).astype(int).tolist()) for _ in range(5)
+        tuple((np.asarray(_tab10(_)[:3]) * 255).astype(int).tolist())
+        for _ in range(num_classes)
     ]
     if separate_background:
         colours.insert(0, "none")
     for img, label, pred in zip(images, labels, predictions):
         img = img.to("cpu", copy=True)
-        label = label.to("cpu", torch.bool, copy=True)
-        pred = pred.to("cpu", torch.bool, copy=True)
+        label = one_hot(label, num_classes=num_classes).to("cpu", torch.bool, copy=True)
+        pred = one_hot(pred, num_classes=num_classes).to("cpu", torch.bool, copy=True)
         # Images must be handled last as full size RGB required for draw_segmentation_masks
         rgb_img = img.repeat((3, 1, 1))
         pred = to_pil_image(draw_segmentation_masks(rgb_img, pred, colors=colours))
