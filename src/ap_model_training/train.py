@@ -141,7 +141,7 @@ def run(
             val_epoch_metrics = None
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
-            train_epoch_metrics, _, _ = train(
+            train_epoch_metrics, _ = train(
                 training_objects, training_parameters, epoch=epoch
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
@@ -154,7 +154,7 @@ def run(
                     param.requires_grad = True
 
             if (epoch + 1) % training_parameters.val_interval == 0:
-                val_epoch_metrics, _, best_val_epoch = validate(
+                val_epoch_metrics, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
@@ -300,7 +300,7 @@ def train(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
-) -> tuple[MetricsOutput, list[MetricsOutput], bool]:
+) -> tuple[MetricsOutput, bool]:
     metrics = training_objects.train_metrics
     metrics.reset()
     training_objects.model.train()
@@ -310,7 +310,7 @@ def train(
             / training_parameters.training_batch_size
         )
     )
-    step_metrics_list: list[MetricsOutput] = []
+    loss_list: list[float] = []
     for step, batch_data in tqdm(
         enumerate(training_objects.training_dataloader, 1),
         desc=f"Epoch {epoch + 1} training",
@@ -351,12 +351,12 @@ def train(
                 training_objects.lr_scheduler.step()
 
         # Calculate metrics and log progress for this step
-        print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
+        # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
+        mlflow.log_metric("train_loss", loss.item(), step=epoch_len * epoch + step)
 
         del images
-        _logger.info("Starting step metric calulcations")
-        step_metrics = metrics.get_step_metrics(
-            loss=loss.item(),
+        _logger.debug("Updating metrics")
+        metrics.update(
             y=labels,
             y_pred=torch.stack(
                 [
@@ -364,21 +364,8 @@ def train(
                     for _ in decollate_batch(outputs)
                 ],
             ),
-            weights=training_parameters.loss_weights,
-            device=training_objects.device,
         )
-        step_metrics_list.append(step_metrics)
-        _logger.info("Completed step metric calulcations")
-        _logger.info("Logging step metric calulcations")
-        mlflow.log_metrics(
-            step_metrics.to_dict(
-                split_labels=True,
-                labels=training_parameters.label_names,
-                prefix="train",
-            ),
-            step=epoch_len * epoch + step,
-        )
-        _logger.info("Completed logging step metric calulcations")
+        loss_list.append(loss.item())
         del loss
 
         del outputs
@@ -387,7 +374,7 @@ def train(
         clear_memory()
 
     epoch_metrics = metrics.get_epoch_metrics(
-        step_losses=[_.loss for _ in step_metrics_list],
+        step_losses=loss_list,
         weights=training_parameters.loss_weights,
         device=training_objects.device,
     )
@@ -407,7 +394,7 @@ def train(
         metrics_to_log,
         step=epoch + 1,
     )
-    return epoch_metrics, step_metrics_list, best_epoch
+    return epoch_metrics, best_epoch
 
 
 def validate(
@@ -416,7 +403,7 @@ def validate(
     epoch: int,
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
-) -> tuple[MetricsOutput, list[MetricsOutput], bool]:
+) -> tuple[MetricsOutput, bool]:
     metrics = training_objects.val_metrics
     metrics.reset()
     training_objects.model.eval()
@@ -426,9 +413,8 @@ def validate(
             / training_parameters.validation_batch_size
         )
     )
-    step_metrics_list: list[MetricsOutput] = []
+    loss_list: list[float] = []
     with torch.no_grad():
-        step = 1
         for step, data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
             desc=f"Epoch {epoch + 1} validation",
@@ -451,28 +437,18 @@ def validate(
 
             del images
 
-            step_metrics = metrics.get_step_metrics(
-                loss=loss.item(),
+            _logger.debug("Updating metrics")
+            metrics.update(
                 y=labels,
                 y_pred=torch.stack(
                     [
                         training_objects.post_val_transform(_)
                         for _ in decollate_batch(outputs)
-                    ]
+                    ],
                 ),
-                weights=training_parameters.loss_weights,
-                device=training_objects.device,
             )
-            step_metrics_list.append(step_metrics)
+            loss_list.append(loss.item())
 
-            mlflow.log_metrics(
-                step_metrics.to_dict(
-                    split_labels=True,
-                    labels=training_parameters.label_names,
-                    prefix="train",
-                ),
-                step=epoch_len * epoch + step,
-            )
             del loss
 
             del outputs
@@ -480,7 +456,7 @@ def validate(
             clear_memory()
 
         epoch_metrics = metrics.get_epoch_metrics(
-            step_losses=[_.loss for _ in step_metrics_list],
+            step_losses=loss_list,
             weights=training_parameters.loss_weights,
             device=training_objects.device,
         )
@@ -512,7 +488,7 @@ def validate(
             step=epoch + 1,
         )
 
-    return epoch_metrics, step_metrics_list, best_epoch
+    return epoch_metrics, best_epoch
 
 
 def get_metrics_to_log(
