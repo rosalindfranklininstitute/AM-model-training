@@ -123,6 +123,14 @@ class Metrics:
             device
         )
 
+    def update(
+        self,
+        y: torch.Tensor,
+        y_pred: torch.Tensor,
+    ) -> None:
+        for f in fields(self):
+            getattr(self, f.name).update(y_pred, y)
+
     def get_step_metrics(
         self,
         loss: float,
