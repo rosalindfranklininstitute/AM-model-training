@@ -182,6 +182,22 @@ def run(
                     training_parameters.best_metric
                 ]
             ):
+                if val_epoch_metrics is None:
+                    _logger.info(
+                        "Starting final validation loop, as train stopper has been triggered but no validation has been run this epoch"
+                    )
+                    val_epoch_metrics, best_val_epoch = validate(
+                        training_objects,
+                        training_parameters,
+                        epoch=epoch,
+                        model_path=model_path.with_stem(
+                            f"{model_path.stem}_epoch{epoch:03}"
+                        ),
+                        model_signature=model_signature,
+                    )
+
+                    val_epoch_metrics_dict[epoch] = val_epoch_metrics
+                    clear_memory()
                 _logger.info(
                     "Stopped early after epoch %i due to train stopper",
                     epoch + 1,
