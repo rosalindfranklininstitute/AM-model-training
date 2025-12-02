@@ -127,9 +127,9 @@ def run(
             for param in training_objects.model.encoder.parameters():
                 param.requires_grad = False
 
-        train_epoch_metrics_list: list[EpochMetrics] = []
-        val_epoch_metrics_list: list[EpochMetrics] = []
-
+        train_epoch_metrics_dict: dict[int, MetricsOutput] = {}
+        val_epoch_metrics_dict: dict[int, MetricsOutput] = {}
+        epoch: int = 1
         for epoch in tqdm(
             range(training_parameters.max_epochs),
             desc="Training progress",
@@ -137,12 +137,14 @@ def run(
             total=training_parameters.max_epochs,
             initial=1,
         ):
+            train_epoch_metrics = None
+            val_epoch_metrics = None
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
             train_epoch_metrics, _, _ = train(
                 training_objects, training_parameters, epoch=epoch
             )
-            train_epoch_metrics_list.append(train_epoch_metrics)
+            train_epoch_metrics_dict[epoch] = train_epoch_metrics
 
             clear_memory()
 
@@ -162,7 +164,7 @@ def run(
                     model_signature=model_signature,
                 )
 
-                val_epoch_metrics_list.append(val_epoch_metrics)
+                val_epoch_metrics_dict[epoch] = val_epoch_metrics
                 clear_memory()
 
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
@@ -201,21 +203,27 @@ def run(
         )
         pd.DataFrame(
             [
-                _.to_dict(
-                    split_labels=True,
-                    labels=training_parameters.label_names,
-                )
-                for _ in train_epoch_metrics_list
+                {
+                    "epoch": epoch,
+                    **train_epoch_metrics_dict[epoch].to_dict(
+                        split_labels=True,
+                        labels=training_parameters.label_names,
+                    ),
+                }
+                for epoch in sorted(train_epoch_metrics_dict)
             ]
         ).to_csv(model_path.with_name(f"{model_path.stem}_train_metrics.csv"))
 
         pd.DataFrame(
             [
-                _.to_dict(
-                    split_labels=True,
-                    labels=training_parameters.label_names,
-                )
-                for _ in val_epoch_metrics_list
+                {
+                    "epoch": epoch,
+                    **val_epoch_metrics_dict[epoch].to_dict(
+                        split_labels=True,
+                        labels=training_parameters.label_names,
+                    ),
+                }
+                for epoch in sorted(val_epoch_metrics_dict)
             ]
         ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
 
