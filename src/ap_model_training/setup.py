@@ -307,7 +307,7 @@ def setup_training_objects(
         post_val_transform=post_val_transform,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
-        training_data_workers=training_batch_size,
+        training_data_workers=training_batch_size * 2,
         validation_data_workers=validation_batch_size * 2,
         check_loaders=False,
         **kwargs,
