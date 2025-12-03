@@ -20,7 +20,11 @@ try:
     from IPython import get_ipython
 
     ip = get_ipython()
-    from tqdm.notebook import tqdm
+    if ip is None:
+        from tqdm import tqdm
+    else:
+        from tqdm.notebook import tqdm
+
 except ImportError:
     from tqdm import tqdm
 
