@@ -146,7 +146,7 @@ def run(
             val_epoch_metrics = None
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
-            train_epoch_metrics, _ = train(
+            train_epoch_metrics, best_train_epoch = train(
                 training_objects, training_parameters, epoch=epoch
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
@@ -158,7 +158,7 @@ def run(
                 for param in training_objects.model.encoder.parameters():
                     param.requires_grad = True
 
-            if (epoch + 1) % training_parameters.val_interval == 0:
+            if (epoch + 1) % training_parameters.val_interval == 0 or best_train_epoch:
                 val_epoch_metrics, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
