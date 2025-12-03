@@ -374,7 +374,8 @@ def train(
 
         # Calculate metrics and log progress for this step
         # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
-        mlflow.log_metric("train_loss", loss.item(), step=epoch_len * epoch + step)
+        loss = loss.item()
+        mlflow.log_metric("train_loss", loss, step=epoch_len * epoch + step)
 
         del images
         _logger.debug("Updating metrics")
@@ -387,7 +388,7 @@ def train(
                 ],
             ),
         )
-        loss_list.append(loss.item())
+        loss_list.append(loss)
         del loss
 
         del outputs
@@ -455,7 +456,8 @@ def validate(
                 )
                 loss = training_objects.loss_function(outputs, labels)
 
-            mlflow.log_metric("val_loss", loss.item(), step=epoch_len * epoch + step)
+            loss = loss.item()
+            mlflow.log_metric("val_loss", loss, step=epoch_len * epoch + step)
 
             del images
 
@@ -469,7 +471,7 @@ def validate(
                     ],
                 ),
             )
-            loss_list.append(loss.item())
+            loss_list.append(loss)
 
             del loss
 
