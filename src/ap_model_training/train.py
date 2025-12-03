@@ -164,7 +164,7 @@ def run(
                     training_parameters,
                     epoch=epoch,
                     model_path=model_path.with_stem(
-                        f"{model_path.stem}_epoch{epoch:03}"
+                        f"{model_path.stem}_epoch{epoch + 1:03}"
                     ),
                     model_signature=model_signature,
                 )
@@ -196,7 +196,7 @@ def run(
                         training_parameters,
                         epoch=epoch,
                         model_path=model_path.with_stem(
-                            f"{model_path.stem}_epoch{epoch:03}"
+                            f"{model_path.stem}_epoch{epoch + 1:03}"
                         ),
                         model_signature=model_signature,
                     )
