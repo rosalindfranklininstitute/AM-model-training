@@ -139,7 +139,7 @@ def segresnetvae(
     )
 
 
-def fpn(
+def smp_fpn(
     num_channels: int = 3,
     label_count: int = 5,
     pretrained: bool = False,
@@ -155,6 +155,21 @@ def fpn(
     )
 
 
+def smp_manet(
+    num_channels: int = 3,
+    label_count: int = 5,
+    pretrained: bool = False,
+    **kwargs: typing.Any,
+) -> smp.MAnet:
+    return smp.MAnet(
+        encoder_name="efficientnet-b6",
+        encoder_weights="imagenet" if pretrained else None,
+        in_channels=num_channels,
+        classes=label_count,
+        activation=None,
+    )
+
+
 model_creation_functions: dict[str, Callable[..., torch.nn.Module]] = {
     "efficientnet_b4_flexibleunet": efficientnet_b4_flexibleunet,
     "unet": unet,
@@ -165,5 +180,6 @@ model_creation_functions: dict[str, Callable[..., torch.nn.Module]] = {
     "segresnetvae": segresnetvae,
     "smp_efficientnet_b4_unet": smp_efficientnet_b4_unet,
     "smp_efficientnet_b4_unetplusplus": smp_efficientnet_b4_unetplusplus,
-    "fpn": fpn,
+    "smp_fpn": smp_fpn,
+    "smp_manet": smp_manet,
 }

@@ -72,7 +72,7 @@ try:
 
     run.run_training(
         models_dir=models_dir,
-        model_name="fpn",  # "segresnet",
+        model_name="smp_fpn",  # "segresnet",
         # csv_path=all_files_csv,
         training_csv_path=train_csv,
         validation_csv_path=validate_csv,
