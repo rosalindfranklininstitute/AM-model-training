@@ -38,6 +38,7 @@ def create_dataset(
     dataset_type: type[data.Dataset] = data.Dataset,
     **transform_kwargs: typing.Any,
 ) -> data.Dataset:
+    datalist: Sequence
     if isinstance(input_data, np.ndarray):
         datalist = [
             {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
