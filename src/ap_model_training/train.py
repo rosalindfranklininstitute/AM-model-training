@@ -331,6 +331,7 @@ def _train_step(
     metrics: Metrics,
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
+    submit_images: bool = False,
 ) -> float:
     training_objects.optimizer.zero_grad()
     # with torch.autocast(training_objects.device.type):
@@ -373,6 +374,16 @@ def _train_step(
             for _ in decollate_batch(outputs)  # type: ignore
         ]
     )
+    if submit_images:
+        submit_images_to_mlflow(
+            images,
+            labels,
+            outputs,
+            step=step,
+            num_classes=training_parameters.num_classes,
+            timestamp=int(time.time()),
+            separate_background=False,
+        )
     del images
     _logger.debug("Updating metrics")
     metrics.update(
@@ -386,6 +397,7 @@ def train(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
+    submit_images: bool = False,
 ) -> tuple[MetricsOutput, bool]:
     metrics = training_objects.train_metrics
     metrics.reset()
@@ -412,6 +424,7 @@ def train(
             metrics=metrics,
             training_objects=training_objects,
             training_parameters=training_parameters,
+            submit_images=submit_images,
         )
         loss_list.append(step_loss)
 
