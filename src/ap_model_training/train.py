@@ -33,12 +33,14 @@ from monai.transforms import Compose
 from monai.utils import set_determinism
 
 from ap_model_training.utils import MONAI_KEYS
-from ap_model_training.metrics import MetricsOutput
+from ap_model_training.metrics import MetricsOutput, Metrics
 
 if typing.TYPE_CHECKING:
     from os import PathLike
     from ap_model_training.setup import TrainingObjects, TrainingParameters
 
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 _logger = logging.getLogger("adaptive_milling_training")
 
@@ -97,6 +99,7 @@ class EarlyStopper:
 def run(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
+    submit_training_images: bool = False,
 ) -> None:
     model_path = Path(training_parameters.model_path)
 
@@ -129,7 +132,7 @@ def run(
 
         if training_parameters.frozen_epochs > 0:
             # Freeze model if some initial epochs will be frozen
-            for param in training_objects.model.encoder.parameters():
+            for param in training_objects.model.encoder.parameters():  # type: ignore
                 param.requires_grad = False
 
         train_epoch_metrics_dict: dict[int, MetricsOutput] = {}
@@ -147,7 +150,10 @@ def run(
             # print("-" * 10)
             # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
             train_epoch_metrics, best_train_epoch = train(
-                training_objects, training_parameters, epoch=epoch
+                training_objects,
+                training_parameters,
+                epoch=epoch,
+                submit_images=submit_training_images,
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
 
@@ -155,11 +161,11 @@ def run(
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
                 # Unfreeze (no need if it wasn't frozen)
-                for param in training_objects.model.encoder.parameters():
+                for param in training_objects.model.encoder.parameters():  # type: ignore
                     param.requires_grad = True
 
             if (epoch + 1) % training_parameters.val_interval == 0 or best_train_epoch:
-                val_epoch_metrics, best_val_epoch = validate(
+                val_epoch_metrics, _ = validate(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
@@ -191,7 +197,7 @@ def run(
                     _logger.info(
                         "Starting final validation loop, as train stopper has been triggered but no validation has been run this epoch"
                     )
-                    val_epoch_metrics, best_val_epoch = validate(
+                    val_epoch_metrics, _ = validate(
                         training_objects,
                         training_parameters,
                         epoch=epoch,
@@ -288,15 +294,15 @@ def submit_validation_images_to_mflow(
                 data[MONAI_KEYS.IMAGE].to(training_objects.device),
                 data[MONAI_KEYS.LABEL].to(training_objects.device),
             )
-            with torch.autocast(training_objects.device.type):
-                outputs = training_objects.validation_inferer(
-                    images, training_objects.model
-                )
+            # with torch.autocast(training_objects.device.type):
+            outputs = training_objects.validation_inferer(
+                images, training_objects.model
+            )
 
             outputs = torch.stack(
                 [
                     training_objects.post_val_transform(_)
-                    for _ in decollate_batch(outputs)
+                    for _ in decollate_batch(outputs)  # type: ignore
                 ]
             )
 
@@ -316,6 +322,64 @@ def submit_validation_images_to_mflow(
 
         mlflow.flush_artifact_async_logging()
         mlflow.flush_async_logging()
+
+
+def _train_step(
+    step: int,
+    images: torch.Tensor,
+    labels: torch.Tensor,
+    metrics: Metrics,
+    training_objects: TrainingObjects,
+    training_parameters: TrainingParameters,
+) -> float:
+    training_objects.optimizer.zero_grad()
+    # with torch.autocast(training_objects.device.type):
+    outputs = training_objects.training_inferer(images, training_objects.model)
+    loss = training_objects.loss_function(outputs, labels)
+
+    skip_lr_scheduler = False
+    if training_objects.grad_scaler is not None:
+        training_objects.grad_scaler.scale(loss).backward()
+        training_objects.grad_scaler.step(training_objects.optimizer)
+        scale = training_objects.grad_scaler.get_scale()
+        training_objects.grad_scaler.update()
+        skip_lr_scheduler = scale > training_objects.grad_scaler.get_scale()
+    else:
+        loss.backward()
+        training_objects.optimizer.step()
+
+    if training_objects.lr_scheduler is not None:
+        mlflow.log_metrics(
+            {
+                f"learning_rate_{i}": _
+                for i, _ in enumerate(training_objects.lr_scheduler.get_last_lr())
+            },
+            step=step,
+        )
+
+        if not skip_lr_scheduler:
+            training_objects.lr_scheduler.step()
+
+    # Calculate metrics and log progress for this step
+    # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
+    loss_value = loss.item()
+    if np.isnan(loss_value):
+        raise ValueError(f"NaN loss returned during training step {step}")
+    mlflow.log_metric("train_loss", loss_value, step=step)
+
+    outputs = torch.stack(
+        [
+            training_objects.post_train_transform(_)
+            for _ in decollate_batch(outputs)  # type: ignore
+        ]
+    )
+    del images
+    _logger.debug("Updating metrics")
+    metrics.update(
+        y=labels,
+        y_pred=outputs,
+    )
+    return loss_value
 
 
 def train(
@@ -340,61 +404,20 @@ def train(
         unit="step",
         leave=False,
     ):
-        images, labels = (
-            batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
-            batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
-        )
-        training_objects.optimizer.zero_grad()
-        with torch.autocast(training_objects.device.type):
-            outputs = training_objects.training_inferer(images, training_objects.model)
-            loss = training_objects.loss_function(outputs, labels)
-
-        skip_lr_scheduler = False
-        if training_objects.grad_scaler is not None:
-            training_objects.grad_scaler.scale(loss).backward()
-            training_objects.grad_scaler.step(training_objects.optimizer)
-            scale = training_objects.grad_scaler.get_scale()
-            training_objects.grad_scaler.update()
-            skip_lr_scheduler = scale > training_objects.grad_scaler.get_scale()
-        else:
-            loss.backward()
-            training_objects.optimizer.step()
-
-        if training_objects.lr_scheduler is not None:
-            mlflow.log_metrics(
-                {
-                    f"learning_rate_{i}": _
-                    for i, _ in enumerate(training_objects.lr_scheduler.get_last_lr())
-                },
-                step=epoch_len * epoch + step,
-            )
-
-            if not skip_lr_scheduler:
-                training_objects.lr_scheduler.step()
-
-        # Calculate metrics and log progress for this step
-        # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
-        loss = loss.item()
-        mlflow.log_metric("train_loss", loss, step=epoch_len * epoch + step)
-
-        del images
-        _logger.debug("Updating metrics")
-        metrics.update(
-            y=labels,
-            y_pred=torch.stack(
-                [
-                    training_objects.post_train_transform(_)
-                    for _ in decollate_batch(outputs)
-                ],
-            ),
-        )
-        loss_list.append(loss)
-        del loss
-
-        del outputs
-        del labels
-
         clear_memory()
+        step_loss = _train_step(
+            step=epoch_len * epoch + step,
+            images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
+            labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+            metrics=metrics,
+            training_objects=training_objects,
+            training_parameters=training_parameters,
+        )
+        loss_list.append(step_loss)
+
+        del batch_data
+
+    clear_memory()
 
     epoch_metrics = metrics.get_epoch_metrics(
         step_losses=loss_list,
@@ -420,6 +443,36 @@ def train(
     return epoch_metrics, best_epoch
 
 
+def _validate_step(
+    step: int,
+    images: torch.Tensor,
+    labels: torch.Tensor,
+    metrics: Metrics,
+    training_objects: TrainingObjects,
+    training_parameters: TrainingParameters,
+) -> float:
+    # with torch.autocast(training_objects.device.type):
+    outputs = training_objects.validation_inferer(images, training_objects.model)
+    loss = training_objects.loss_function(outputs, labels)
+
+    loss_value = loss.item()
+    mlflow.log_metric("val_loss", loss_value, step=step)
+
+    del images
+
+    _logger.debug("Updating metrics")
+    metrics.update(
+        y=labels,
+        y_pred=torch.stack(
+            [
+                training_objects.post_val_transform(_)
+                for _ in decollate_batch(outputs)  # type: ignore
+            ],
+        ),
+    )
+    return loss_value
+
+
 def validate(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
@@ -427,18 +480,20 @@ def validate(
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
 ) -> tuple[MetricsOutput, bool]:
-    metrics = training_objects.val_metrics
-    metrics.reset()
-    training_objects.model.eval()
     epoch_len = int(
         np.ceil(
             training_parameters.total_validation_data
             / training_parameters.validation_batch_size
         )
     )
+
+    metrics = training_objects.val_metrics
+    metrics.reset()
+    training_objects.model.eval()
+
     loss_list: list[float] = []
     with torch.no_grad():
-        for step, data in tqdm(
+        for step, batch_data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
             desc=f"Epoch {epoch + 1} validation",
             total=epoch_len,
@@ -446,38 +501,18 @@ def validate(
             leave=False,
         ):
             clear_memory()
-            images, labels = (
-                data[MONAI_KEYS.IMAGE].to(training_objects.device),
-                data[MONAI_KEYS.LABEL].to(training_objects.device),
+            _validate_step(
+                step=epoch_len * epoch + step,
+                images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
+                labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+                metrics=metrics,
+                training_objects=training_objects,
+                training_parameters=training_parameters,
             )
-            with torch.autocast(training_objects.device.type):
-                outputs = training_objects.validation_inferer(
-                    images, training_objects.model
-                )
-                loss = training_objects.loss_function(outputs, labels)
 
-            loss = loss.item()
-            mlflow.log_metric("val_loss", loss, step=epoch_len * epoch + step)
+            del batch_data
 
-            del images
-
-            _logger.debug("Updating metrics")
-            metrics.update(
-                y=labels,
-                y_pred=torch.stack(
-                    [
-                        training_objects.post_val_transform(_)
-                        for _ in decollate_batch(outputs)
-                    ],
-                ),
-            )
-            loss_list.append(loss)
-
-            del loss
-
-            del outputs
-            del labels
-            clear_memory()
+        clear_memory()
 
         epoch_metrics = metrics.get_epoch_metrics(
             step_losses=loss_list,
