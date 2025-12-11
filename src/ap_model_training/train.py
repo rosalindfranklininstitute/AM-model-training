@@ -550,9 +550,9 @@ def get_metrics_to_log(
 
 
 def submit_images_to_mlflow(
-    images: torch.Tensor | list[torch.Tensor],
-    labels: torch.Tensor | list[torch.Tensor],
-    predictions: torch.Tensor | list[torch.Tensor],
+    images: torch.Tensor,
+    labels: torch.Tensor,
+    predictions: torch.Tensor,
     step: int,
     max_dims: tuple[int, int] = (512, 512),
     num_classes: int = 5,
@@ -565,18 +565,35 @@ def submit_images_to_mlflow(
         tuple((np.asarray(_tab10(_)[:3]) * 255).astype(int).tolist())
         for _ in range(num_classes)
     ]
-    if separate_background:
-        colours.insert(0, "none")
     for img, label, pred in zip(images, labels, predictions):
         img = img.to("cpu", copy=True)
-        label = one_hot(label, num_classes=num_classes).to("cpu", torch.bool, copy=True)
-        pred = one_hot(pred, num_classes=num_classes).to("cpu", torch.bool, copy=True)
+        label = (
+            one_hot(torch.squeeze(label), num_classes=num_classes)
+            .to("cpu", torch.bool, copy=True)
+            .permute(2, 0, 1)
+        )
+        pred = (
+            one_hot(torch.squeeze(pred), num_classes=num_classes)
+            .to("cpu", torch.bool, copy=True)
+            .permute(2, 0, 1)
+        )
         # Images must be handled last as full size RGB required for draw_segmentation_masks
-        rgb_img = img.repeat((3, 1, 1))
-        pred = to_pil_image(draw_segmentation_masks(rgb_img, pred, colors=colours))
+        if len(img.shape) == 2 or img.shape[0] == 1:
+            rgb_img = img.repeat((3, 1, 1))
+        else:
+            rgb_img = img
+        pred = to_pil_image(
+            draw_segmentation_masks(
+                rgb_img, pred[1 if separate_background else 0 :, ...], colors=colours
+            )
+        )
         pred.thumbnail(max_dims)
 
-        label = to_pil_image(draw_segmentation_masks(rgb_img, label, colors=colours))
+        label = to_pil_image(
+            draw_segmentation_masks(
+                rgb_img, label[1 if separate_background else 0 :, ...], colors=colours
+            )
+        )
         label.thumbnail(max_dims)
         del rgb_img
 
