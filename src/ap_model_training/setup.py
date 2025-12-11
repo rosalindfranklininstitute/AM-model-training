@@ -248,6 +248,8 @@ def setup_training_objects(
     num_classes: int,
     model: torch.nn.Module,
     loss_function: losses._Loss,
+    training_batch_size: int,
+    validation_batch_size: int,
     learning_rate: float = 1e-4,
     lr_scheduler_name: str = "onecyclelr",
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
@@ -288,9 +290,6 @@ def setup_training_objects(
 
     grad_scaler = torch.GradScaler(device=device.type)
     # grad_scaler = None
-
-    training_batch_size = 6
-    validation_batch_size = 1
 
     return TrainingObjects(
         training_data,

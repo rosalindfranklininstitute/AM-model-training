@@ -177,6 +177,8 @@ def setup_training(
         model=model,
         num_classes=num_classes,
         loss_function=loss_function,
+        training_batch_size=training_batch_size,
+        validation_batch_size=validation_batch_size,
         learning_rate=training_parameters.learning_rate,
         lr_scheduler_name=lr_scheduler_name,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
