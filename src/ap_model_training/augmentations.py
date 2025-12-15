@@ -98,9 +98,7 @@ class OpenCVReader(data.image_reader.NumpyReader):
 
     def get_data(self, img) -> tuple[torch.Tensor, dict]:  # type: ignore
         img, metadata = super().get_data(img=img)
-        return convert_to_tensor(
-            data=data, dtype=None, track_meta=get_track_meta()
-        ), metadata
+        return torch.from_numpy(img), metadata
 
 
 def get_transform_list(
