@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 import torch
+from torch.amp.grad_scaler import GradScaler
 
 from monai.utils.misc import first
 from monai import data, transforms, losses, optimizers, inferers
@@ -53,7 +54,7 @@ def create_dataset(
         data=datalist,
         transform=transforms.Compose(
             get_transform_list(
-                image_size,
+                image_size=image_size,
                 augmentations=augmentations,
                 pad=pad,
                 rgb=rgb,
@@ -86,12 +87,12 @@ def create_datasets(
         ratios=(1 - validation_split, validation_split),
         num_partitions=2,
         seed=42,
-        shuffle=True,
+        shuffle=False,
     )
 
     return (
         create_dataset(
-            train,
+            input_data=train,
             image_size=image_size,
             augmentations=True,
             pad=pad,
@@ -100,7 +101,7 @@ def create_datasets(
             **transform_kwargs,
         ),
         create_dataset(
-            validate,
+            input_data=validate,
             image_size=image_size,
             augmentations=False,
             pad=pad,
@@ -207,13 +208,13 @@ class TrainingObjects:
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
     train_metrics: Metrics
     val_metrics: Metrics
-    grad_scaler: torch.GradScaler | None = None
+    grad_scaler: GradScaler | None = None
     post_train_transform: transforms.Transform | Callable = lambda x: x
     post_val_transform: transforms.Transform | Callable = lambda x: x
     training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    training_dataloader: data.Dataloader = field(init=False)
-    validation_dataloader: data.Dataloader = field(init=False)
+    training_dataloader: data.dataloader.DataLoader = field(init=False)
+    validation_dataloader: data.dataloader.DataLoader = field(init=False)
     # InitVars:
     training_data_workers: InitVar[int] = 4
     validation_data_workers: InitVar[int] = 4
@@ -289,7 +290,7 @@ def setup_training_objects(
         optimizer, **lr_scheduler_kwargs
     )
 
-    grad_scaler = torch.GradScaler(device=device.type)
+    grad_scaler = GradScaler(device=device.type)
     # grad_scaler = None
 
     return TrainingObjects(
@@ -321,7 +322,7 @@ def load_data(
     check_data_loads: bool = True,
     training_workers: int = 4,
     validation_workers: int = 1,
-) -> tuple[data.DataLoader, data.DataLoader]:
+) -> tuple[data.dataloader.DataLoader, data.dataloader.DataLoader]:
     pin_memory = training_objects.device.type == "cuda"
 
     if check_data_loads:
@@ -335,7 +336,7 @@ def load_data(
         first_batch = first(check_loader)
         assert first_batch is not None, "DataLoader check failed"
 
-    training_dataloader = data.DataLoader(
+    training_dataloader = data.dataloader.DataLoader(
         training_objects.training_data,
         batch_size=training_batch_size,
         shuffle=True,
@@ -344,7 +345,7 @@ def load_data(
         persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
     )
 
-    validation_dataloader = data.DataLoader(
+    validation_dataloader = data.dataloader.DataLoader(
         training_objects.validation_data,
         batch_size=validation_batch_size,
         shuffle=True,
