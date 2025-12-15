@@ -514,7 +514,7 @@ def validate(
             leave=False,
         ):
             clear_memory()
-            _validate_step(
+            step_loss = _validate_step(
                 step=epoch_len * epoch + step,
                 images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
                 labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
@@ -522,6 +522,7 @@ def validate(
                 training_objects=training_objects,
                 training_parameters=training_parameters,
             )
+            loss_list.append(step_loss)
 
             del batch_data
 
