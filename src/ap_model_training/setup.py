@@ -348,7 +348,7 @@ def load_data(
     validation_dataloader = data.dataloader.DataLoader(
         training_objects.validation_data,
         batch_size=validation_batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=validation_workers,
         pin_memory=pin_memory,
         persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
