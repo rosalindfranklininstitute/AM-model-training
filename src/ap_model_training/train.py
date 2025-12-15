@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
+from torch.amp import autocast
 from torch.nn.functional import one_hot
 from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import draw_segmentation_masks
@@ -294,10 +295,10 @@ def submit_validation_images_to_mflow(
                 data[MONAI_KEYS.IMAGE].to(training_objects.device),
                 data[MONAI_KEYS.LABEL].to(training_objects.device),
             )
-            # with torch.autocast(training_objects.device.type):
-            outputs = training_objects.validation_inferer(
-                images, training_objects.model
-            )
+            with autocast(training_objects.device.type):
+                outputs = training_objects.validation_inferer(
+                    images, training_objects.model
+                )
 
             outputs = torch.stack(
                 [
@@ -334,9 +335,9 @@ def _train_step(
     submit_images: bool = False,
 ) -> float:
     training_objects.optimizer.zero_grad()
-    # with torch.autocast(training_objects.device.type):
-    outputs = training_objects.training_inferer(images, training_objects.model)
-    loss = training_objects.loss_function(outputs, labels)
+    with autocast(training_objects.device.type):
+        outputs = training_objects.training_inferer(images, training_objects.model)
+        loss = training_objects.loss_function(outputs, labels)
 
     skip_lr_scheduler = False
     if training_objects.grad_scaler is not None:
@@ -464,9 +465,9 @@ def _validate_step(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
 ) -> float:
-    # with torch.autocast(training_objects.device.type):
-    outputs = training_objects.validation_inferer(images, training_objects.model)
-    loss = training_objects.loss_function(outputs, labels)
+    with autocast(training_objects.device.type):
+        outputs = training_objects.validation_inferer(images, training_objects.model)
+        loss = training_objects.loss_function(outputs, labels)
 
     loss_value = loss.item()
     mlflow.log_metric("val_loss", loss_value, step=step)
