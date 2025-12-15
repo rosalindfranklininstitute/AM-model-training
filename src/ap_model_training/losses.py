@@ -18,6 +18,10 @@ def weights_to_tensor(weights: Sequence[float], device: DeviceLikeType) -> Tenso
     return torch.Tensor(weights).to(device)
 
 
+def log_exp_softmax_activation(tensor: torch.Tensor) -> torch.Tensor:
+    return torch.log_softmax(tensor, dim=1).exp()
+
+
 def loss_wrapper(
     loss_fn: Callable[[Tensor, Tensor], Tensor],
     include_background: bool = True,
@@ -68,7 +72,7 @@ def diceloss(include_background: bool, weights: Tensor, **kwargs) -> losses.Dice
     return losses.DiceLoss(
         include_background=include_background,
         to_onehot_y=True,
-        softmax=True,
+        other_act=log_exp_softmax_activation,
         weight=weights,
     )
 
@@ -79,7 +83,7 @@ def diceceloss(
     return losses.DiceCELoss(
         include_background=include_background,
         to_onehot_y=True,
-        softmax=True,
+        other_act=log_exp_softmax_activation,
         # DiceCELoss doesn't trim the first weight value:
         weight=weights,
         lambda_dice=0.5,
@@ -93,10 +97,9 @@ def dicefocalloss(
     if not include_background:
         weights = weights[1:]
     return losses.DiceFocalLoss(
-        other_act=torch.argmax,
+        other_act=log_exp_softmax_activation,
         include_background=include_background,
         to_onehot_y=True,
-        softmax=True,
         # DiceCELoss doesn't trim the first weight value:
         weight=weights,
         lambda_dice=0.5,
@@ -127,7 +130,7 @@ def generalizeddicefocalloss(include_background: bool, weights: Tensor, **kwargs
     return losses.GeneralizedDiceFocalLoss(
         # include_background=include_background,
         to_onehot_y=True,
-        softmax=True,
+        other_act=log_exp_softmax_activation,
         lambda_focal=0.5,
         lambda_gdl=0.5,
         weight=weights,
@@ -138,7 +141,7 @@ def generalizeddiceloss(include_background: bool, **kwargs):
     return losses.GeneralizedDiceLoss(
         include_background=include_background,
         to_onehot_y=True,
-        softmax=True,
+        other_act=log_exp_softmax_activation,
     )
 
 
