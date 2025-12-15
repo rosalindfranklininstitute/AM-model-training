@@ -165,6 +165,7 @@ def run(
                 for param in training_objects.model.encoder.parameters():  # type: ignore
                     param.requires_grad = True
 
+            epoch_info_str = f"Epoch {epoch + 1}/{training_parameters.max_epochs}, Train Loss: {train_epoch_metrics.loss:.4f}"
             if (epoch + 1) % training_parameters.val_interval == 0 or best_train_epoch:
                 val_epoch_metrics, _ = validate(
                     training_objects,
@@ -179,6 +180,11 @@ def run(
                 val_epoch_metrics_dict[epoch] = val_epoch_metrics
                 clear_memory()
 
+                epoch_info_str += f", Val Loss: {val_epoch_metrics.loss:.4f}"
+
+            tqdm.write(epoch_info_str)
+
+            if val_epoch_metrics is not None:
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
                     training_parameters.current_metrics["val"][
                         training_parameters.best_metric
@@ -548,6 +554,7 @@ def validate(
 
         if best_epoch:
             torch.save(training_objects.model.state_dict(), model_path)
+            tqdm.write(f"Model saved: {str(model_path)}")
             if model_signature is not None:
                 mlflow.pytorch.log_model(
                     training_objects.model,
