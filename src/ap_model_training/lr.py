@@ -154,7 +154,7 @@ def plot_learning_rates(
     if loss_kwargs.get("weights") is not None:
         loss_kwargs["weights"] = losses.weights_to_tensor(
             loss_kwargs["weights"], device=device
-        )
+        ).detach()
 
     models_to_test = list(models.model_creation_functions.keys())
     if models_to_ignore is not None:

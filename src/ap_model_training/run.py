@@ -149,7 +149,7 @@ def setup_training(
     if loss_kwargs.get("weights") is not None:
         loss_kwargs["weights"] = losses.weights_to_tensor(
             loss_kwargs["weights"], device=device
-        )
+        ).detach()
 
     model_creator = models.model_creation_functions[model_name]
 
