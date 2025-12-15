@@ -268,7 +268,6 @@ class NormaliseTransformd(transforms.transform.MapTransform):
 
 
 class PadTransformd(transforms.transform.MapTransform):
-    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -277,6 +276,7 @@ class PadTransformd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
+    @torch.no_grad()
     def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
         image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         # Calculate padding
@@ -305,7 +305,6 @@ class ResizeTransformd(transforms.transform.MapTransform):
         self._image_size = image_size
         self._pad = pad
 
-    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -316,6 +315,7 @@ class ResizeTransformd(transforms.transform.MapTransform):
             )
         return d
 
+    @torch.no_grad()
     def _transform(
         self, data: NDArray[typing.Any] | torch.Tensor, mask: bool
     ) -> torch.Tensor:
