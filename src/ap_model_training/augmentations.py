@@ -1,14 +1,19 @@
 from __future__ import annotations
 import logging
 import typing
+from pathlib import Path
+from random import Random
 
 import torch
 import numpy as np
+import cv2
+from PIL import Image
 from torchvision.transforms.v2 import (
     functional as functional_transforms,
     InterpolationMode,
+    GaussianBlur,
 )
-from torchvision.transforms import RandomResizedCrop, GaussianBlur
+from torchvision.transforms import RandomResizedCrop
 from torchvision.transforms.functional import resized_crop
 from monai import data, transforms
 from monai.transforms.io.dictionary import LoadImaged
@@ -17,14 +22,17 @@ from monai.transforms.intensity.dictionary import (
     RandGaussianSmoothd,
     RandGaussianSharpend,
 )
+from monai.utils import ensure_tuple
 from monai.utils.type_conversion import convert_to_tensor
 from monai.data.meta_obj import get_track_meta
 
 from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
-    from numpy.typing import NDArray
     from collections.abc import Mapping, Hashable, Collection, Sequence
+
+    from numpy.typing import NDArray
+    from monai.config import PathLike
 
     KeysCollection = typing.Union[Collection[Hashable], Hashable]
 
@@ -32,7 +40,67 @@ __all__ = [
     "get_transform_list",
 ]
 
+
 _logger = logging.getLogger("adaptive_milling_training")
+
+# Forces OpenCV to run in single-threaded mode within each worker process (avoids competing with worker threads)
+cv2.setNumThreads(0)
+
+
+class OpenCVReader(data.image_reader.NumpyReader):
+    def __init__(self, rescale_input: bool = False, **kwargs) -> None:
+        super().__init__()
+        self.rescale_input = rescale_input
+        self.kwargs = kwargs
+
+    def verify_suffix(self, filename: Sequence[PathLike] | PathLike) -> bool:
+        """
+        Verify whether the specified `filename` is supported by the current reader.
+        This method should return True if the reader is able to read the format suggested by the
+        `filename`.
+
+        Args:
+            filename: file name or a list of file names to read.
+                if a list of files, verify all the suffixes.
+
+        """
+        return True
+
+    def read(
+        self, data: Sequence[PathLike] | PathLike, **kwargs
+    ) -> Sequence[typing.Any] | typing.Any:
+        """
+        Read image data from specified file or files.
+        Note that it returns a data object or a sequence of data objects.
+
+        Args:
+            data: file name or a list of file names to read.
+            kwargs: additional args for actual `read` API of 3rd party libs.
+
+        """
+        img_ = []
+        filenames: Sequence[PathLike] = ensure_tuple(data)
+        kwargs_ = self.kwargs.copy()
+        kwargs_.update(kwargs)
+        rescale_input: bool = kwargs_.pop("rescale_input", self.rescale_input)
+        for name in filenames:
+            if Path(name).is_file():
+                arr = np.asarray(cv2.imread(str(name), cv2.IMREAD_UNCHANGED, **kwargs))
+                if rescale_input:
+                    if arr.dtype == np.uint8:
+                        arr = arr.astype(np.float32) / 255.0
+                    elif arr.dtype == np.uint16:
+                        arr = arr.astype(np.float32) / 65535.0
+                    else:
+                        raise ValueError(f"Unsupported image dtype: {arr.dtype}")
+                img_.append(arr)
+        return img_ if len(filenames) > 1 else img_[0]
+
+    def get_data(self, img) -> tuple[torch.Tensor, dict]:  # type: ignore
+        img, metadata = super().get_data(img=img)
+        return convert_to_tensor(
+            data=data, dtype=None, track_meta=get_track_meta()
+        ), metadata
 
 
 def get_transform_list(
@@ -46,16 +114,19 @@ def get_transform_list(
     loading = [
         LoadImaged(
             [MONAI_KEYS.IMAGE],
-            reader=data.image_reader.PILReader,
+            reader=OpenCVReader,
+            rescale_input=True,
+            # converter=converter_PIL,
             image_only=True,
             ensure_channel_first=True,
             reverse_indexing=False,
-            dtype=None,
+            dtype=np.float32,
         ),
-        NormalizeInputImagesd([MONAI_KEYS.IMAGE]),
+        # NormalizeInputImagesd([MONAI_KEYS.IMAGE]),
         LoadImaged(
             [MONAI_KEYS.LABEL],
-            reader=data.image_reader.PILReader,
+            reader=OpenCVReader,
+            rescale_input=False,
             image_only=True,
             ensure_channel_first=True,
             reverse_indexing=False,
@@ -96,17 +167,19 @@ def get_transform_list(
             scale=(0.7, 1.0),
             ratio=(1.5, 1.5),
             prob=0.3,
-            interpolation=InterpolationMode.BICUBIC,
+            interpolation=InterpolationMode.BILINEAR,
+            mask_interpolation=InterpolationMode.NEAREST_EXACT,
         ),
         # Ensure cropping doesn't introduce any NaNs (https://github.com/Project-MONAI/MONAI/discussions/2637):
         # SignalFillEmptyd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
-        RandGaussianSmoothd(
-            [MONAI_KEYS.IMAGE],
-            sigma_x=(3, 5),
-            sigma_y=(3, 5),
-            sigma_z=(0, 0),
-            prob=0.3,
-        ),
+        RandGaussianBlurd([MONAI_KEYS.IMAGE], blur_limit=(3, 5), prob=0.3),
+        # RandGaussianSmoothd(
+        #     [MONAI_KEYS.IMAGE],
+        #     sigma_x=(3, 5),
+        #     sigma_y=(3, 5),
+        #     sigma_z=(0, 0),
+        #     prob=0.3,
+        # ),
         *preprocessing,
         # RandAffined(
         #     [MONAI_KEYS.IMAGE],
@@ -139,14 +212,13 @@ class NormalizeInputImagesd(transforms.transform.MapTransform):
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         for key in self.key_iterator(d):
-            d[key] = self._transform(d[key])
+            d[key] = NormalizeInputImagesd._transform(d[key])
         return d
 
-    def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
-        if isinstance(data, np.ndarray):
-            img = torch.from_numpy(data)
-        else:
-            img = data
+    @torch.no_grad()
+    @staticmethod
+    def _transform(data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
+        img = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         if img.dtype == torch.uint8:
             img = img.to(torch.float32) / 255.0
         elif img.dtype == torch.uint16:
@@ -182,16 +254,21 @@ class NormaliseTransformd(transforms.transform.MapTransform):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
         self._transform = NormaliseTransform(clamp=clamp)
 
+    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         for key in self.key_iterator(d):
-            d[key] = self._transform(d[key])
+            image = convert_to_tensor(
+                data=d[key], dtype=None, track_meta=get_track_meta()
+            )
+            d[key] = self._transform(image)
         return d
 
 
 class PadTransformd(transforms.transform.MapTransform):
+    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -200,7 +277,8 @@ class PadTransformd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
-    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+    def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
+        image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         # Calculate padding
         image_shape = (image.shape[-2], image.shape[-1])
         large_axis = np.argmax(image_shape)
@@ -227,6 +305,7 @@ class ResizeTransformd(transforms.transform.MapTransform):
         self._image_size = image_size
         self._pad = pad
 
+    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -237,7 +316,10 @@ class ResizeTransformd(transforms.transform.MapTransform):
             )
         return d
 
-    def _transform(self, image: torch.Tensor, mask: bool) -> torch.Tensor:
+    def _transform(
+        self, data: NDArray[typing.Any] | torch.Tensor, mask: bool
+    ) -> torch.Tensor:
+        image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         if self._pad:
             target_shape = (self._image_size, self._image_size)
         else:
@@ -259,6 +341,51 @@ class ResizeTransformd(transforms.transform.MapTransform):
         return (int(shape[0]), int(shape[1]))
 
 
+class RandGaussianBlurd(
+    transforms.transform.RandomizableTransform, transforms.transform.MapTransform
+):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        blur_limit: tuple[int, int] | int = 0,
+        sigma_limit: tuple[float, float] | float = (0.5, 3.0),
+        prob: float = 0.5,
+        allow_missing_keys: bool = False,
+    ) -> None:
+        transforms.transform.MapTransform.__init__(
+            self, keys, allow_missing_keys=allow_missing_keys
+        )
+        transforms.transform.MapTransform.__init__(self, keys, allow_missing_keys)
+        transforms.transform.RandomizableTransform.__init__(self, prob)
+        self.blur_limit = typing.cast("tuple[int, int]", blur_limit)
+        self.sigma_limit = typing.cast("tuple[float, float]", sigma_limit)
+        self.py_random = Random()
+
+    @torch.no_grad()
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        self.randomize(None)
+        if self._do_transform:
+            sigma = self.py_random.uniform(*self.sigma_limit)
+            ksize = self.py_random.randint(*self.blur_limit)
+
+            # Using the logic from Albumentations create_gaussian_kernel_1d
+            # PIL's kernel creation approach
+            size = int(sigma * 3.5) * 2 + 1 if ksize == 0 else ksize
+            # Ensure odd size
+            size = size + 1 if size % 2 == 0 else size
+
+            blur = GaussianBlur(kernel_size=size, sigma=sigma)
+            for key in self.key_iterator(d):
+                image = convert_to_tensor(
+                    data=d[key], dtype=None, track_meta=get_track_meta()
+                )
+                d[key] = blur.transform(image, params=blur.make_params(None))  # type: ignore
+        return d
+
+
 class ToRGBTransformd(transforms.transform.MapTransform):
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
@@ -268,7 +395,9 @@ class ToRGBTransformd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
-    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+    @torch.no_grad()
+    def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
+        image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         return functional_transforms.grayscale_to_rgb(image)
 
 
@@ -295,7 +424,9 @@ class DoGChannelsd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
-    def _transform(self, image: torch.Tensor) -> torch.Tensor:
+    @torch.no_grad()
+    def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
+        image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         image[:, 0, ...] = self._g1_0.forward(image[:, 0, ...]) - self._g1_1.forward(
             image[:, 0, ...]
         )
@@ -323,7 +454,6 @@ class RandResizedCropd(
         transforms.transform.MapTransform.__init__(
             self, keys, allow_missing_keys=allow_missing_keys
         )
-        transforms.transform.MapTransform.__init__(self, keys, allow_missing_keys)
         transforms.transform.RandomizableTransform.__init__(self, prob)
         self._size = size
         self._scale = scale
@@ -332,24 +462,29 @@ class RandResizedCropd(
         self._mask_interpolation = mask_interpolation
         self._antialias = antialias
 
+    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
-        params: tuple[int, int, int, int] = RandomResizedCrop.get_params(
-            d[self.first_key(d)],
-            scale=self._scale,  # type: ignore
-            ratio=self._ratio,  # type: ignore
-        )
+        self.randomize(None)
         if self._do_transform:
+            params: tuple[int, int, int, int] = RandomResizedCrop.get_params(
+                d[self.first_key(d)],
+                scale=self._scale,  # type: ignore
+                ratio=self._ratio,  # type: ignore
+            )
             for key in self.key_iterator(d):
+                image = convert_to_tensor(
+                    data=d[key], dtype=None, track_meta=get_track_meta()
+                )
                 if key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED):
                     # Force NEAREST_EXACT for labels/predictions
                     interpolation = self._mask_interpolation
                 else:
                     interpolation = self._interpolation
                 d[key] = resized_crop(
-                    d[key],
+                    image,
                     *params,
                     size=self._size,  # type: ignore
                     interpolation=interpolation,
