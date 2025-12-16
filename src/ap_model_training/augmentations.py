@@ -15,6 +15,7 @@ from torchvision.transforms.v2 import (
 )
 from torchvision.transforms import RandomResizedCrop
 from torchvision.transforms.functional import resized_crop
+
 from monai import data, transforms
 from monai.transforms.io.dictionary import LoadImaged
 from monai.transforms.spatial.dictionary import RandAffined, Rand2DElastic
@@ -114,7 +115,6 @@ def get_transform_list(
             [MONAI_KEYS.IMAGE],
             reader=OpenCVReader,
             rescale_input=True,
-            # converter=converter_PIL,
             image_only=True,
             ensure_channel_first=True,
             reverse_indexing=False,
