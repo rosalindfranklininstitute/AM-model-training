@@ -11,7 +11,7 @@ import torch
 from torch.amp.grad_scaler import GradScaler
 
 from monai.utils.misc import first
-from monai import data, transforms, losses, optimizers, inferers
+from monai import data, transforms, optimizers, inferers
 
 from ap_model_training.schedulers import lr_scheduler_creation_functions
 from ap_model_training.augmentations import get_transform_list
@@ -22,8 +22,10 @@ from ap_model_training.metrics import Metrics
 if typing.TYPE_CHECKING:
     from os import PathLike
     from collections.abc import Callable, Mapping
-    from matplotlib.axes import Axes
+
     from numpy.typing import NDArray
+    from matplotlib.axes import Axes
+    from torch.nn.modules.loss import _Loss
 
 
 _logger = logging.getLogger("adaptive_milling_training")
@@ -203,7 +205,7 @@ class TrainingObjects:
     validation_data: data.Dataset
     device: torch.device
     model: torch.nn.Module
-    loss_function: losses._Loss
+    loss_function: _Loss
     optimizer: torch.optim.Optimizer
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
     train_metrics: Metrics
@@ -249,7 +251,7 @@ def setup_training_objects(
     validation_data: data.Dataset,
     num_classes: int,
     model: torch.nn.Module,
-    loss_function: losses._Loss,
+    loss_function: _Loss,
     training_batch_size: int,
     validation_batch_size: int,
     learning_rate: float = 1e-4,
