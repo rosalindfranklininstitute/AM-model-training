@@ -190,6 +190,9 @@ def run(
                         training_parameters.best_metric
                     ]
                 ):
+                    tqdm.write(
+                        f"Stopped early after epoch {epoch + 1} due to val stopper"
+                    )
                     _logger.info(
                         "Stopped early after epoch %i due to val stopper", epoch + 1
                     )
@@ -216,6 +219,9 @@ def run(
 
                     val_epoch_metrics_dict[epoch] = val_epoch_metrics
                     clear_memory()
+                tqdm.write(
+                    f"Stopped early after epoch {epoch + 1} due to train stopper"
+                )
                 _logger.info(
                     "Stopped early after epoch %i due to train stopper",
                     epoch + 1,
