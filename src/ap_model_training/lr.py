@@ -99,6 +99,9 @@ def plot_learning_rates(
         df,
         image_size=image_size,
         validation_split=0.15,
+        dataset_type=setup.CryoSEMDataset,
+        rgb=True,
+        pad=False,
         # dataset_type=CacheDataset,
     )
     _logger.info("Datasets loaded")

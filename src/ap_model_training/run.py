@@ -72,6 +72,7 @@ def setup_training(
             _load_csv(training_csv_path),
             image_size=image_size,
             augmentations=True,
+            dataset_type=setup.CryoSEMDataset,
             pad=pad,
             rgb=rgb,
         )
@@ -80,6 +81,7 @@ def setup_training(
             _load_csv(validation_csv_path),
             image_size=image_size,
             augmentations=False,
+            dataset_type=setup.CryoSEMDataset,
             pad=pad,
             rgb=rgb,
         )
@@ -89,6 +91,7 @@ def setup_training(
             _load_csv(csv_path),
             image_size=image_size,
             validation_split=validation_split,
+            dataset_type=setup.CryoSEMDataset,
             pad=pad,
             rgb=rgb,
         )
