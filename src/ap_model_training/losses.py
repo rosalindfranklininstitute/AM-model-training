@@ -5,6 +5,7 @@ import typing
 import torch
 from monai import losses
 from monai.networks.utils import one_hot
+import segmentation_models_pytorch as smp
 
 if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -153,6 +154,27 @@ def crossentropyloss(include_background: bool, weights: Tensor, **kwargs):
     )
 
 
+# Compound loss function
+def compound_loss(weights: Tensor, alpha: float = 0.5, **kwargs):
+    # Define individual loss components
+    ce_loss = torch.nn.CrossEntropyLoss(weight=weights)
+
+    def weighted_dice_loss(outputs, masks):
+        dice = smp.losses.DiceLoss(
+            mode="multiclass", from_logits=True
+        )  # Using multiclass mode without 'reduction'
+        loss_per_class = dice(outputs, masks)
+        weighted_loss = (loss_per_class * weights).mean()
+        return weighted_loss
+
+    def loss_function(outputs, targets) -> float:
+        return alpha * ce_loss(outputs, torch.squeeze(targets, dim=1)) + (
+            1 - alpha
+        ) * weighted_dice_loss(outputs, torch.squeeze(targets, dim=1))
+
+    return loss_function
+
+
 loss_creation_functions: dict[str, Callable] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
@@ -163,4 +185,5 @@ loss_creation_functions: dict[str, Callable] = {
     "generalizeddicefocalloss": generalizeddicefocalloss,
     "generalizeddiceloss": generalizeddiceloss,
     "crossentropyloss": crossentropyloss,
+    "compound_loss": compound_loss,
 }
