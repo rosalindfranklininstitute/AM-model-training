@@ -417,7 +417,6 @@ def _train_step(
     loss_value = loss.item()
     if np.isnan(loss_value):
         raise ValueError(f"NaN loss returned during training step {step}")
-    mlflow.log_metric("train_loss", loss_value, step=step)
 
     outputs = torch.stack(
         [
@@ -425,16 +424,18 @@ def _train_step(
             for _ in decollate_batch(outputs)  # type: ignore
         ]
     )
-    if log_mlflow and submit_images:
-        submit_images_to_mlflow(
-            images,
-            labels,
-            outputs,
-            step=step,
-            num_classes=training_parameters.num_classes,
-            timestamp=int(time.time()),
-            separate_background=False,
-        )
+    if log_mlflow:
+        mlflow.log_metric("train_loss", loss_value, step=step)
+        if submit_images:
+            submit_images_to_mlflow(
+                images,
+                labels,
+                outputs,
+                step=step,
+                num_classes=training_parameters.num_classes,
+                timestamp=int(time.time()),
+                separate_background=False,
+            )
     del images
     _logger.debug("Updating metrics")
     metrics.update(
