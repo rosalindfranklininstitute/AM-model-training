@@ -213,6 +213,7 @@ def run_training(
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     training_batch_size: int = 2,
     validation_batch_size: int = 2,
+    log_mlflow: bool = False,
     submit_training_images: bool = False,
 ) -> None:
     models_dir = Path(models_dir)
@@ -259,6 +260,7 @@ def run_training(
         training_objects,
         training_parameters=training_parameters,
         submit_training_images=submit_training_images,
+        log_mlflow=log_mlflow,
     )
 
 

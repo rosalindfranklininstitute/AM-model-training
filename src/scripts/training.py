@@ -104,6 +104,8 @@ try:
         },
         training_batch_size=6,
         validation_batch_size=1,
+        log_mlflow=False,
+        submit_training_images=False,
     )
 finally:  # noqa: E722
     try:

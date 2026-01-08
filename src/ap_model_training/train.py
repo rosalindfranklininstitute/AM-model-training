@@ -6,6 +6,7 @@ import gc
 import pandas as pd
 from importlib.metadata import distributions
 from pathlib import Path
+from contextlib import nullcontext
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -101,6 +102,7 @@ def run(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     submit_training_images: bool = False,
+    log_mlflow: bool = False,
 ) -> None:
     model_path = Path(training_parameters.model_path)
 
@@ -110,26 +112,29 @@ def run(
     # Fix determinism for consistent results
     set_determinism(seed=42)
 
-    with mlflow.start_run():
-        # log model to mlflow
-        input_array = np.random.uniform(
-            size=(
-                1,
-                training_parameters.num_channels,
-                *training_parameters.input_image_shape,
+    with mlflow.start_run() if log_mlflow else nullcontext():
+        if log_mlflow:
+            # log model to mlflow
+            input_array = np.random.uniform(
+                size=(
+                    1,
+                    training_parameters.num_channels,
+                    *training_parameters.input_image_shape,
+                )
+            ).astype(np.float32)
+            model_signature = mlflow.models.infer_signature(
+                input_array,
+                training_objects.model(
+                    torch.from_numpy(input_array).to(training_objects.device)
+                ).numpy(force=True),
             )
-        ).astype(np.float32)
-        model_signature = mlflow.models.infer_signature(
-            input_array,
-            training_objects.model(
-                torch.from_numpy(input_array).to(training_objects.device)
-            ).numpy(force=True),
-        )
-        del input_array
+            del input_array
 
-        mlflow.log_params(training_parameters.asdict(include_metrics=False))
+            mlflow.log_params(training_parameters.asdict(include_metrics=False))
 
-        log_training_objects_to_mlflow(training_objects)
+            log_training_objects_to_mlflow(training_objects)
+        else:
+            model_signature = None
 
         if training_parameters.frozen_epochs > 0:
             # Freeze model if some initial epochs will be frozen
@@ -155,10 +160,24 @@ def run(
                 training_parameters,
                 epoch=epoch,
                 submit_images=submit_training_images,
+                log_mlflow=log_mlflow,
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
 
             clear_memory()
+
+            pd.DataFrame(
+                [
+                    {
+                        "epoch": epoch,
+                        **train_epoch_metrics_dict[epoch].to_dict(
+                            split_labels=True,
+                            labels=training_parameters.label_names,
+                        ),
+                    }
+                    for epoch in sorted(train_epoch_metrics_dict)
+                ]
+            ).to_csv(model_path.with_name(f"{model_path.stem}_train_metrics.csv"))
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
                 # Unfreeze (no need if it wasn't frozen)
@@ -175,6 +194,7 @@ def run(
                         f"{model_path.stem}_epoch{epoch + 1:03}"
                     ),
                     model_signature=model_signature,
+                    log_mlflow=log_mlflow,
                 )
 
                 val_epoch_metrics_dict[epoch] = val_epoch_metrics
@@ -183,6 +203,19 @@ def run(
                 epoch_info_str += f", Val Loss: {val_epoch_metrics.loss:.4f}"
 
             tqdm.write(epoch_info_str)
+
+            pd.DataFrame(
+                [
+                    {
+                        "epoch": epoch,
+                        **val_epoch_metrics_dict[epoch].to_dict(
+                            split_labels=True,
+                            labels=training_parameters.label_names,
+                        ),
+                    }
+                    for epoch in sorted(val_epoch_metrics_dict)
+                ]
+            ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
 
             if val_epoch_metrics is not None:
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
@@ -215,6 +248,7 @@ def run(
                             f"{model_path.stem}_epoch{epoch + 1:03}"
                         ),
                         model_signature=model_signature,
+                        log_mlflow=log_mlflow,
                     )
 
                     val_epoch_metrics_dict[epoch] = val_epoch_metrics
@@ -228,18 +262,11 @@ def run(
                 )
                 break
 
+
         clear_memory()
 
         print(
             f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
-        )
-        mlflow.log_param(
-            "best_train_metrics",
-            training_parameters.best_metrics["train"],
-        )
-        mlflow.log_param(
-            "best_val_metrics",
-            training_parameters.best_metrics["val"],
         )
         pd.DataFrame(
             [
@@ -267,12 +294,21 @@ def run(
             ]
         ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
 
-        best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
-        submit_validation_images_to_mflow(
-            training_objects=training_objects,
-            training_parameters=training_parameters,
-            epoch=best_val_epoch,
-        )
+        if log_mlflow:
+            mlflow.log_param(
+                "best_train_metrics",
+                training_parameters.best_metrics["train"],
+            )
+            mlflow.log_param(
+                "best_val_metrics",
+                training_parameters.best_metrics["val"],
+            )
+            best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
+            submit_validation_images_to_mflow(
+                training_objects=training_objects,
+                training_parameters=training_parameters,
+                epoch=best_val_epoch,
+            )
 
 
 def submit_validation_images_to_mflow(
@@ -344,12 +380,13 @@ def _train_step(
     metrics: Metrics,
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
+    log_mlflow: bool = False,
     submit_images: bool = False,
 ) -> float:
     training_objects.optimizer.zero_grad()
     with autocast(training_objects.device.type):
         outputs = training_objects.training_inferer(images, training_objects.model)
-        loss = training_objects.loss_function(outputs, labels)
+        loss = training_objects.loss_function(outputs.squeeze(1), labels.squeeze(1))
 
     skip_lr_scheduler = False
     if training_objects.grad_scaler is not None:
@@ -363,13 +400,14 @@ def _train_step(
         training_objects.optimizer.step()
 
     if training_objects.lr_scheduler is not None:
-        mlflow.log_metrics(
-            {
-                f"learning_rate_{i}": _
-                for i, _ in enumerate(training_objects.lr_scheduler.get_last_lr())
-            },
-            step=step,
-        )
+        if log_mlflow:
+            mlflow.log_metrics(
+                {
+                    f"learning_rate_{i}": _
+                    for i, _ in enumerate(training_objects.lr_scheduler.get_last_lr())
+                },
+                step=step,
+            )
 
         if not skip_lr_scheduler:
             training_objects.lr_scheduler.step()
@@ -387,7 +425,7 @@ def _train_step(
             for _ in decollate_batch(outputs)  # type: ignore
         ]
     )
-    if submit_images:
+    if log_mlflow and submit_images:
         submit_images_to_mlflow(
             images,
             labels,
@@ -410,6 +448,7 @@ def train(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
+    log_mlflow: bool = False,
     submit_images: bool = False,
 ) -> tuple[MetricsOutput, bool]:
     metrics = training_objects.train_metrics
@@ -437,6 +476,7 @@ def train(
             metrics=metrics,
             training_objects=training_objects,
             training_parameters=training_parameters,
+            log_mlflow=log_mlflow,
             submit_images=submit_images,
         )
         loss_list.append(step_loss)
@@ -462,10 +502,11 @@ def train(
         ),
     )
 
-    mlflow.log_metrics(
-        metrics_to_log,
-        step=epoch + 1,
-    )
+    if log_mlflow:
+        mlflow.log_metrics(
+            metrics_to_log,
+            step=epoch + 1,
+        )
     return epoch_metrics, best_epoch
 
 
@@ -476,13 +517,15 @@ def _validate_step(
     metrics: Metrics,
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
+    log_mlflow: bool = False,
 ) -> float:
     with autocast(training_objects.device.type):
         outputs = training_objects.validation_inferer(images, training_objects.model)
-        loss = training_objects.loss_function(outputs, labels)
+        loss = training_objects.loss_function(outputs.squeeze(1), labels.squeeze(1))
 
     loss_value = loss.item()
-    mlflow.log_metric("val_loss", loss_value, step=step)
+    if log_mlflow:
+        mlflow.log_metric("val_loss", loss_value, step=step)
 
     del images
 
@@ -505,6 +548,7 @@ def validate(
     epoch: int,
     model_path: str | PathLike[str],
     model_signature: mlflow.models.ModelSignature | None = None,
+    log_mlflow: bool = False,
 ) -> tuple[MetricsOutput, bool]:
     epoch_len = int(
         np.ceil(
@@ -534,6 +578,7 @@ def validate(
                 metrics=metrics,
                 training_objects=training_objects,
                 training_parameters=training_parameters,
+                log_mlflow=log_mlflow,
             )
             loss_list.append(step_loss)
 
@@ -570,10 +615,11 @@ def validate(
                 )
             _logger.info(f"Saved new best metric model: {model_path}")
 
-        mlflow.log_metrics(
-            metrics_to_log,
-            step=epoch + 1,
-        )
+        if log_mlflow:
+            mlflow.log_metrics(
+                metrics_to_log,
+                step=epoch + 1,
+            )
 
     return epoch_metrics, best_epoch
 
