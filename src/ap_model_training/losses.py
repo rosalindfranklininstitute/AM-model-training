@@ -125,11 +125,13 @@ def generalized_wasserstein_dice_loss(
     )
 
 
-def generalizeddicefocalloss(include_background: bool, weights: Tensor, **kwargs):
+def generalizeddicefocalloss(
+    include_background: bool, weights: Tensor, **kwargs
+) -> losses.GeneralizedDiceFocalLoss:
     if not include_background:
         weights = weights[1:]
     return losses.GeneralizedDiceFocalLoss(
-        # include_background=include_background,
+        include_background=include_background,
         to_onehot_y=True,
         other_act=log_exp_softmax_activation,
         lambda_focal=0.5,
@@ -138,7 +140,9 @@ def generalizeddicefocalloss(include_background: bool, weights: Tensor, **kwargs
     )
 
 
-def generalizeddiceloss(include_background: bool, **kwargs):
+def generalizeddiceloss(
+    include_background: bool, **kwargs
+) -> losses.GeneralizedDiceLoss:
     return losses.GeneralizedDiceLoss(
         include_background=include_background,
         to_onehot_y=True,
@@ -146,7 +150,9 @@ def generalizeddiceloss(include_background: bool, **kwargs):
     )
 
 
-def crossentropyloss(include_background: bool, weights: Tensor, **kwargs):
+def crossentropyloss(
+    include_background: bool, weights: Tensor, **kwargs
+) -> torch.nn.CrossEntropyLoss:
     if not include_background:
         weights = weights[1:]
     return torch.nn.CrossEntropyLoss(
@@ -157,11 +163,11 @@ def crossentropyloss(include_background: bool, weights: Tensor, **kwargs):
 # Compound loss function
 def compound_loss(
     weights: Tensor, alpha: float = 0.5, **kwargs
-) -> Callable[[Tensor, Tensor], float]:
+) -> Callable[[Tensor, Tensor], Tensor]:
     # Define individual loss components
     ce_loss = torch.nn.CrossEntropyLoss(weight=weights.detach().clone())
 
-    def weighted_dice_loss(outputs, masks):
+    def weighted_dice_loss(outputs: Tensor, masks: Tensor) -> Tensor:
         dice = smp.losses.DiceLoss(
             mode="multiclass", from_logits=True
         )  # Using multiclass mode without 'reduction'
@@ -169,7 +175,7 @@ def compound_loss(
         weighted_loss = (loss_per_class * weights.detach().clone()).mean()
         return weighted_loss
 
-    def loss_function(outputs: Tensor, targets: Tensor) -> float:
+    def loss_function(outputs: Tensor, targets: Tensor) -> Tensor:
         return alpha * ce_loss(outputs, torch.squeeze(targets, dim=1)) + (
             1 - alpha
         ) * weighted_dice_loss(outputs, torch.squeeze(targets, dim=1))
@@ -177,7 +183,9 @@ def compound_loss(
     return loss_function
 
 
-loss_creation_functions: dict[str, Callable] = {
+loss_creation_functions: dict[
+    str, Callable[..., Callable[[Tensor, Tensor], Tensor]]
+] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
     "dicefocalloss": dicefocalloss,
