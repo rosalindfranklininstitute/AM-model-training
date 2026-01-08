@@ -69,6 +69,7 @@ def loss_wrapper(
 
 def diceloss(include_background: bool, weights: Tensor, **kwargs) -> losses.DiceLoss:
     if not include_background:
+        # DiceLoss doesn't trim the first weight value:
         weights = weights[1:]
     return losses.DiceLoss(
         include_background=include_background,
@@ -85,7 +86,6 @@ def diceceloss(
         include_background=include_background,
         to_onehot_y=True,
         other_act=log_exp_softmax_activation,
-        # DiceCELoss doesn't trim the first weight value:
         weight=weights,
         lambda_dice=0.5,
         lambda_ce=0.5,
@@ -96,12 +96,12 @@ def dicefocalloss(
     include_background: bool, weights: Tensor, **kwargs
 ) -> losses.DiceFocalLoss:
     if not include_background:
+        # DiceFocalLoss doesn't trim the first weight value:
         weights = weights[1:]
     return losses.DiceFocalLoss(
         other_act=log_exp_softmax_activation,
         include_background=include_background,
         to_onehot_y=True,
-        # DiceCELoss doesn't trim the first weight value:
         weight=weights,
         lambda_dice=0.5,
         lambda_focal=0.5,
@@ -154,6 +154,7 @@ def crossentropyloss(
     include_background: bool, weights: Tensor, **kwargs
 ) -> torch.nn.CrossEntropyLoss:
     if not include_background:
+        # CrossEntropyLoss doesn't trim the first weight value:
         weights = weights[1:]
     return torch.nn.CrossEntropyLoss(
         weight=weights, ignore_index=-100 if include_background else 0
