@@ -100,26 +100,18 @@ def create_dataset(
         datalist = input_data
     else:
         raise TypeError(f"Unsupported data type '{type(data)}'")
-    if augmentations:
-        transform = get_train_transform(
-            image_size=image_size, normalise_first=True, rgb=rgb, pad=pad
-        )
-    else:
-        transform = get_val_transform(
-            image_size=image_size, normalise_first=True, rgb=rgb, pad=pad
-        )
+
     return dataset_type(
         data=datalist,
-        transform=transform,
-        # transforms.Compose(
-        #     get_transform_list(
-        #         image_size=image_size,
-        #         augmentations=augmentations,
-        #         pad=pad,
-        #         rgb=rgb,
-        #         **transform_kwargs,
-        #     )
-        # ),
+        transform=transforms.Compose(
+            get_transform_list(
+                image_size=image_size,
+                augmentations=augmentations,
+                pad=pad,
+                rgb=rgb,
+                **transform_kwargs,
+            )
+        ),
     )
 
 
