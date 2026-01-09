@@ -386,7 +386,7 @@ def _train_step(
     training_objects.optimizer.zero_grad()
     with autocast(training_objects.device.type):
         outputs = training_objects.training_inferer(images, training_objects.model)
-        loss = training_objects.loss_function(outputs.squeeze(1), labels.squeeze(1))
+        loss = training_objects.loss_function(outputs, labels)
 
     skip_lr_scheduler = False
     if training_objects.grad_scaler is not None:
@@ -522,7 +522,7 @@ def _validate_step(
 ) -> float:
     with autocast(training_objects.device.type):
         outputs = training_objects.validation_inferer(images, training_objects.model)
-        loss = training_objects.loss_function(outputs.squeeze(1), labels.squeeze(1))
+        loss = training_objects.loss_function(outputs, labels)
 
     loss_value = loss.item()
     if log_mlflow:

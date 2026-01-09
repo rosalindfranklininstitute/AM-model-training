@@ -177,9 +177,12 @@ def compound_loss(
         return weighted_loss
 
     def loss_function(outputs: Tensor, targets: Tensor) -> Tensor:
-        return alpha * ce_loss(outputs, torch.squeeze(targets, dim=1)) + (
-            1 - alpha
-        ) * weighted_dice_loss(outputs, torch.squeeze(targets, dim=1))
+        if len(targets.shape) > 3:
+            # Squeeze channels
+            targets = targets.squeeze(1)
+        return alpha * ce_loss(outputs, targets) + (1 - alpha) * weighted_dice_loss(
+            outputs, targets
+        )
 
     return loss_function
 
