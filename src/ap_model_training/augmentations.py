@@ -370,12 +370,14 @@ class RandGaussianBlurd(
         self.randomize(None)
         if self._do_transform or self._per_image:
             for i, key in enumerate(self.key_iterator(d)):
+                # Per-image skipping and blur
                 if self._per_image or i == 0:
                     if i > 1:
                         self.randomize(None)
                     if not self._do_transform:
                         continue
                     blur = self.get_blur()
+
                 image = convert_to_tensor(
                     data=d[key], dtype=None, track_meta=get_track_meta()
                 )
@@ -483,6 +485,7 @@ class RandResizedCropd(
                 image = convert_to_tensor(
                     data=d[key], dtype=None, track_meta=get_track_meta()
                 )
+                # Per-image skipping and parameters
                 if self._per_image or i == 0:
                     if i > 1:
                         self.randomize(None)
