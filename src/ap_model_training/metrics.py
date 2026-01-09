@@ -15,6 +15,7 @@ from torchmetrics.classification import (
 if typing.TYPE_CHECKING:
     from collections.abc import Collection, Sequence, Iterable
 
+
 @dataclass
 class MetricsOutput:
     weights: InitVar[Sequence[float] | None]
