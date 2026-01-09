@@ -348,6 +348,7 @@ class RandGaussianBlurd(
         blur_limit: tuple[int, int] | int = 0,
         sigma_limit: tuple[float, float] | float = (0.5, 3.0),
         prob: float = 0.5,
+        per_image: bool = True,
         allow_missing_keys: bool = False,
     ) -> None:
         transforms.transform.MapTransform.__init__(
@@ -357,7 +358,9 @@ class RandGaussianBlurd(
         transforms.transform.RandomizableTransform.__init__(self, prob)
         self.blur_limit = typing.cast("tuple[int, int]", blur_limit)
         self.sigma_limit = typing.cast("tuple[float, float]", sigma_limit)
+        self._per_image = per_image
         self.py_random = Random()
+
 
     @torch.no_grad()
     def __call__(
@@ -365,24 +368,31 @@ class RandGaussianBlurd(
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         self.randomize(None)
-        if self._do_transform:
-            sigma = self.py_random.uniform(*self.sigma_limit)
-            ksize = self.py_random.randint(*self.blur_limit)
-
-            # Using the logic from Albumentations create_gaussian_kernel_1d
-            # PIL's kernel creation approach
-            size = int(sigma * 3.5) * 2 + 1 if ksize == 0 else ksize
-            # Ensure odd size
-            size = size + 1 if size % 2 == 0 else size
-
-            blur = GaussianBlur(kernel_size=size, sigma=sigma)
-            for key in self.key_iterator(d):
+        if self._do_transform or self._per_image:
+            for i, key in enumerate(self.key_iterator(d)):
+                if self._per_image or i == 0:
+                    if i > 1:
+                        self.randomize(None)
+                    if not self._do_transform:
+                        continue
+                    blur = self.get_blur()
                 image = convert_to_tensor(
                     data=d[key], dtype=None, track_meta=get_track_meta()
                 )
                 d[key] = blur.transform(image, params=blur.make_params(None))  # type: ignore
         return d
 
+    def get_blur(self) -> GaussianBlur:
+        sigma = self.py_random.uniform(*self.sigma_limit)
+        ksize = self.py_random.randint(*self.blur_limit)
+
+        # Using the logic from Albumentations create_gaussian_kernel_1d
+        # PIL's kernel creation approach
+        size = int(sigma * 3.5) * 2 + 1 if ksize == 0 else ksize
+        # Ensure odd size
+        size = size + 1 if size % 2 == 0 else size
+
+        return GaussianBlur(kernel_size=size, sigma=sigma)
 
 class ToRGBTransformd(transforms.transform.MapTransform):
     def __call__(
@@ -447,6 +457,7 @@ class RandResizedCropd(
         mask_interpolation: InterpolationMode = InterpolationMode.NEAREST_EXACT,
         antialias: bool = True,
         prob: float = 0.3,
+        per_image: bool = True,
         allow_missing_keys: bool = False,
     ) -> None:
         transforms.transform.MapTransform.__init__(
@@ -459,6 +470,7 @@ class RandResizedCropd(
         self._interpolation = interpolation
         self._mask_interpolation = mask_interpolation
         self._antialias = antialias
+        self._per_image = per_image
 
     @torch.no_grad()
     def __call__(
@@ -466,16 +478,18 @@ class RandResizedCropd(
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         self.randomize(None)
-        if self._do_transform:
-            params: tuple[int, int, int, int] = RandomResizedCrop.get_params(
-                d[self.first_key(d)],
-                scale=self._scale,  # type: ignore
-                ratio=self._ratio,  # type: ignore
-            )
-            for key in self.key_iterator(d):
+        if self._do_transform or self._per_image:
+            for i, key in enumerate(self.key_iterator(d)):
                 image = convert_to_tensor(
                     data=d[key], dtype=None, track_meta=get_track_meta()
                 )
+                if self._per_image or i == 0:
+                    if i > 1:
+                        self.randomize(None)
+                    if not self._do_transform:
+                        continue
+                    params = self.get_params(image=image)
+
                 if key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED):
                     # Force NEAREST_EXACT for labels/predictions
                     interpolation = self._mask_interpolation
@@ -483,9 +497,16 @@ class RandResizedCropd(
                     interpolation = self._interpolation
                 d[key] = resized_crop(
                     image,
-                    *params,
+                    *params,  # type: ignore
                     size=self._size,  # type: ignore
                     interpolation=interpolation,
                     antialias=self._antialias,
                 )
         return d
+
+    def get_params(self, image: torch.Tensor) -> tuple[int, int, int, int]:
+        return RandomResizedCrop.get_params(
+            image,
+            scale=self._scale,  # type: ignore
+            ratio=self._ratio,  # type: ignore
+        )
