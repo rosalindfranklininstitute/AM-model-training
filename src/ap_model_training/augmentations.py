@@ -361,31 +361,55 @@ class RandGaussianBlurd(
         self._per_image = per_image
         self.py_random = Random()
 
-
     @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
-        self.randomize(None)
-        if self._do_transform or self._per_image:
-            for i, key in enumerate(self.key_iterator(d)):
-                if i == 0:
-                    blur = self.get_blur()
-                # Per-image skipping and blur
-                elif self._per_image and i > 0:
-                    self.randomize(None)
-                    if not self._do_transform:
+        first_data = d[self.first_key(d)]
+        if self._per_image:
+            blur_list = [self.get_blur() for _ in range(first_data.shape[0])]
+        else:
+            blur = self.get_blur()
+            if blur is None:
+                # Skip everything if params is None
+                return d
+            blur_list = [blur]
+        batch_size = d[self.first_key(d)].shape[0]
+        for i in range(batch_size):
+            if i == 0:
+                blur = self.get_blur()
+            # Per-image skipping and blur
+            elif self._per_image and i > 0:
+                self.randomize(None)
+                if not self._do_transform:
+                    continue
+            blur = self.get_blur()
+        for key in self.key_iterator(d):
+            d[key] = convert_to_tensor(
+                data=d[key], dtype=None, track_meta=get_track_meta()
+            )
+            if self._per_image:
+                for i in range(first_data.shape[0]):
+                    if blur_list[i] is None:
                         continue
-                    blur = self.get_blur()
-
-                image = convert_to_tensor(
-                    data=d[key], dtype=None, track_meta=get_track_meta()
+                    d[key][i, ...] = blur_list[i].transform(  # type: ignore
+                        d[key][i, ...],
+                        params=blur_list[i].make_params(None),  # type: ignore
+                    )
+            else:
+                if blur_list[0] is None:
+                    continue
+                d[key] = blur_list[0].transform(
+                    d[key],
+                    params=blur_list[0].make_params(None),  # type: ignore
                 )
-                d[key] = blur.transform(image, params=blur.make_params(None))  # type: ignore
         return d
 
-    def get_blur(self) -> GaussianBlur:
+    def get_blur(self) -> GaussianBlur | None:
+        self.randomize(None)
+        if not self._do_transform:
+            return None
         sigma = self.py_random.uniform(*self.sigma_limit)
         ksize = self.py_random.randint(*self.blur_limit)
 
@@ -396,6 +420,7 @@ class RandGaussianBlurd(
         size = size + 1 if size % 2 == 0 else size
 
         return GaussianBlur(kernel_size=size, sigma=sigma)
+
 
 class ToRGBTransformd(transforms.transform.MapTransform):
     def __call__(
@@ -480,36 +505,58 @@ class RandResizedCropd(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
-        self.randomize(None)
-        if self._do_transform or self._per_image:
-            for i, key in enumerate(self.key_iterator(d)):
-                image = convert_to_tensor(
-                    data=d[key], dtype=None, track_meta=get_track_meta()
-                )
-                if i == 0:
-                    params = self.get_params(image=image)
-                # Per-image skipping and parameters
-                elif self._per_image and i > 0:
-                    self.randomize(None)
-                    if not self._do_transform:
-                        continue
-                    params = self.get_params(image=image)
+        first_data = d[self.first_key(d)]
+        if self._per_image:
+            params_list = [
+                self.get_params(image=first_data[0, ...])
+                for _ in range(first_data.shape[0])
+            ]
+        else:
+            params = self.get_params(image=first_data)
+            if params is None:
+                # Skip everything if params is None
+                return d
+            params_list = [params]
 
-                if key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED):
-                    # Force NEAREST_EXACT for labels/predictions
-                    interpolation = self._mask_interpolation
-                else:
-                    interpolation = self._interpolation
+        for key in self.key_iterator(d):
+            d[key] = convert_to_tensor(
+                data=d[key], dtype=None, track_meta=get_track_meta()
+            )
+            if key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED):
+                # Force NEAREST_EXACT for labels/predictions
+                interpolation = self._mask_interpolation
+            else:
+                interpolation = self._interpolation
+            if self._per_image:
+                batch_size = first_data.shape[0]
+                for i in range(batch_size):
+                    if params_list[i] is None:
+                        continue
+                    d[key][i, ...] = resized_crop(
+                        d[key][i, ...],
+                        *params_list[i],  # type: ignore
+                        size=self._size,  # type: ignore
+                        interpolation=interpolation,
+                        antialias=self._antialias,
+                    )
+            else:
+                if params_list[0] is None:
+                    continue
                 d[key] = resized_crop(
-                    image,
-                    *params,  # type: ignore
+                    d[key],
+                    *params_list[0],  # type: ignore
                     size=self._size,  # type: ignore
                     interpolation=interpolation,
                     antialias=self._antialias,
                 )
         return d
 
-    def get_params(self, image: torch.Tensor) -> tuple[int, int, int, int]:
+    def get_params(self, image: torch.Tensor) -> tuple[int, int, int, int] | None:
+        # Check if it should be done
+        self.randomize(None)
+        if not self._do_transform:
+            return None
+        # Get resize crop parameters
         return RandomResizedCrop.get_params(
             image,
             scale=self._scale,  # type: ignore
