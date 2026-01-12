@@ -390,13 +390,19 @@ class RandGaussianBlurd(
                 data=d[key], dtype=None, track_meta=get_track_meta()
             )
             if self._per_image:
+                image_list: list[torch.Tensor] = []
                 for i in range(first_data.shape[0]):
+                    image = d[key][i, ...].unsqueeze(0)
                     if blur_list[i] is None:
-                        continue
-                    d[key][i, ...] = blur_list[i].transform(  # type: ignore
-                        d[key][i, ...],
-                        params=blur_list[i].make_params(None),  # type: ignore
-                    )
+                        image_list.append(image)
+                    else:
+                        image_list.append(
+                            blur_list[i].transform(  # type: ignore
+                                image,
+                                params=blur_list[i].make_params(None),  # type: ignore
+                            )
+                        )
+                d[key] = torch.concatenate(image_list, dim=0)
             else:
                 if blur_list[0] is None:
                     continue
@@ -529,16 +535,22 @@ class RandResizedCropd(
                 interpolation = self._interpolation
             if self._per_image:
                 batch_size = first_data.shape[0]
+                image_list: list[torch.Tensor] = []
                 for i in range(batch_size):
+                    image = d[key][i, ...].unsqueeze(0)
                     if params_list[i] is None:
-                        continue
-                    d[key][i, ...] = resized_crop(
-                        d[key][i, ...],
-                        *params_list[i],  # type: ignore
-                        size=self._size,  # type: ignore
-                        interpolation=interpolation,
-                        antialias=self._antialias,
-                    )
+                        image_list.append(image)
+                    else:
+                        image_list.append(
+                            resized_crop(
+                                image,
+                                *params_list[i],  # type: ignore
+                                size=self._size,  # type: ignore
+                                interpolation=interpolation,
+                                antialias=self._antialias,
+                            )
+                        )
+                d[key] = torch.concatenate(image_list, dim=0)
             else:
                 if params_list[0] is None:
                     continue
