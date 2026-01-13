@@ -161,7 +161,7 @@ def get_transform_list(
         *loading,
         RandResizedCropd(
             [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
-            size=(1024, 1536),
+            size=image_size,
             scale=(0.7, 1.0),
             ratio=(1.5, 1.5),
             prob=0.3,
@@ -484,7 +484,7 @@ class RandResizedCropd(
     def __init__(
         self,
         keys: KeysCollection,
-        size: tuple[float, float],
+        size: tuple[int, int] | int,
         scale: tuple[float, float] = (0.08, 1.0),
         ratio: tuple[float, float] = (0.75, 1.3333333333333333),
         interpolation: InterpolationMode = InterpolationMode.BILINEAR,
@@ -512,6 +512,10 @@ class RandResizedCropd(
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         first_data = d[self.first_key(d)]
+        if isinstance(self._size, int):
+            size = RandResizedCropd._get_resize_shape(first_data, image_size=self._size)
+        else:
+            size = self._size
         if self._per_image:
             params_list = [
                 self.get_params(image=first_data[0, ...])
@@ -545,7 +549,7 @@ class RandResizedCropd(
                             resized_crop(
                                 image,
                                 *params_list[i],  # type: ignore
-                                size=self._size,  # type: ignore
+                                size=size,  # type: ignore
                                 interpolation=interpolation,
                                 antialias=self._antialias,
                             )
@@ -557,7 +561,7 @@ class RandResizedCropd(
                 d[key] = resized_crop(
                     d[key],
                     *params_list[0],  # type: ignore
-                    size=self._size,  # type: ignore
+                    size=size,  # type: ignore
                     interpolation=interpolation,
                     antialias=self._antialias,
                 )
@@ -574,3 +578,10 @@ class RandResizedCropd(
             scale=self._scale,  # type: ignore
             ratio=self._ratio,  # type: ignore
         )
+
+    @staticmethod
+    def _get_resize_shape(image, image_size: int) -> tuple[int, int]:
+        image_shape_array = np.asarray(image.shape[-2:])
+        axis_multiplier = np.min(image_size / image_shape_array)
+        shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
+        return (int(shape[0]), int(shape[1]))
