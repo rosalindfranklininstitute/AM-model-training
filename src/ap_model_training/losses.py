@@ -166,14 +166,14 @@ def compound_loss(
     weights: Tensor, alpha: float = 0.5, **kwargs
 ) -> Callable[[Tensor, Tensor], Tensor]:
     # Define individual loss components
-    ce_loss = torch.nn.CrossEntropyLoss(weight=weights.detach().clone())
+    ce_loss = torch.nn.CrossEntropyLoss(weight=weights)
 
     def weighted_dice_loss(outputs: Tensor, masks: Tensor) -> Tensor:
         dice = smp.losses.DiceLoss(
             mode="multiclass", from_logits=True
         )  # Using multiclass mode without 'reduction'
         loss_per_class = dice(outputs, masks)
-        weighted_loss = (loss_per_class * weights.detach().clone()).mean()
+        weighted_loss = (loss_per_class * weights).mean()
         return weighted_loss
 
     def loss_function(outputs: Tensor, targets: Tensor) -> Tensor:
