@@ -165,7 +165,7 @@ def get_transform_list(
             scale=(0.7, 1.0),
             ratio=(1.5, 1.5),
             prob=0.3,
-            interpolation=InterpolationMode.BILINEAR,
+            interpolation=InterpolationMode.BICUBIC,
             mask_interpolation=InterpolationMode.NEAREST_EXACT,
         ),
         # Ensure cropping doesn't introduce any NaNs (https://github.com/Project-MONAI/MONAI/discussions/2637):
