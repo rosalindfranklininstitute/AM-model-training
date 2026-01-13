@@ -213,16 +213,16 @@ class NormalizeInputImagesd(transforms.transform.MapTransform):
             d[key] = NormalizeInputImagesd._transform(d[key])
         return d
 
-    @torch.no_grad()
     @staticmethod
     def _transform(data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
         img = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         if img.dtype == torch.uint8:
-            img = img.to(torch.float32) / 255.0
+            max_ = 255.0
         elif img.dtype == torch.uint16:
-            img = img.to(torch.float32) / 65535.0
+            max_ = 65535.0
         else:
             raise ValueError(f"Unsupported image dtype: {img.dtype}")
+        img.to_(torch.float32).div_(max_)
         return img
 
 
@@ -230,6 +230,7 @@ class NormaliseTransform(transforms.transform.Transform):
     def __init__(self, clamp: tuple[int, int] = (-1, 1)) -> None:
         self._clamp_range = clamp
 
+    @torch.no_grad()
     def __call__(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
         tensor = convert_to_tensor(
             data=data, dtype=torch.float32, track_meta=get_track_meta()
@@ -252,16 +253,12 @@ class NormaliseTransformd(transforms.transform.MapTransform):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
         self._transform = NormaliseTransform(clamp=clamp)
 
-    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
         d = dict(data)
         for key in self.key_iterator(d):
-            image = convert_to_tensor(
-                data=d[key], dtype=None, track_meta=get_track_meta()
-            )
-            d[key] = self._transform(image)
+            d[key] = self._transform(d[key])
         return d
 
 
@@ -274,7 +271,6 @@ class PadTransformd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
-    @torch.no_grad()
     def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
         image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         # Calculate padding
@@ -313,7 +309,6 @@ class ResizeTransformd(transforms.transform.MapTransform):
             )
         return d
 
-    @torch.no_grad()
     def _transform(
         self, data: NDArray[typing.Any] | torch.Tensor, mask: bool
     ) -> torch.Tensor:
@@ -361,7 +356,6 @@ class RandGaussianBlurd(
         self._per_image = per_image
         self.py_random = Random()
 
-    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -385,6 +379,7 @@ class RandGaussianBlurd(
                 if not self._do_transform:
                     continue
             blur = self.get_blur()
+
         for key in self.key_iterator(d):
             d[key] = convert_to_tensor(
                 data=d[key], dtype=None, track_meta=get_track_meta()
@@ -402,14 +397,15 @@ class RandGaussianBlurd(
                                 params=blur_list[i].make_params(None),  # type: ignore
                             )
                         )
-                d[key] = torch.concatenate(image_list, dim=0)
+                tensor = torch.concatenate(image_list, dim=0)
             else:
                 if blur_list[0] is None:
                     continue
-                d[key] = blur_list[0].transform(
+                tensor = blur_list[0].transform(
                     d[key],
                     params=blur_list[0].make_params(None),  # type: ignore
                 )
+            d[key] = tensor
         return d
 
     def get_blur(self) -> GaussianBlur | None:
@@ -437,7 +433,6 @@ class ToRGBTransformd(transforms.transform.MapTransform):
             d[key] = self._transform(d[key])
         return d
 
-    @torch.no_grad()
     def _transform(self, data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
         image = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
         return functional_transforms.grayscale_to_rgb(image)
@@ -506,7 +501,6 @@ class RandResizedCropd(
         self._antialias = antialias
         self._per_image = per_image
 
-    @torch.no_grad()
     def __call__(
         self, data: Mapping[typing.Any, typing.Any]
     ) -> Mapping[typing.Any, typing.Any]:
@@ -554,17 +548,18 @@ class RandResizedCropd(
                                 antialias=self._antialias,
                             )
                         )
-                d[key] = torch.concatenate(image_list, dim=0)
+                tensor = torch.concatenate(image_list, dim=0)
             else:
                 if params_list[0] is None:
                     continue
-                d[key] = resized_crop(
+                tensor = resized_crop(
                     d[key],
                     *params_list[0],  # type: ignore
                     size=size,  # type: ignore
                     interpolation=interpolation,
                     antialias=self._antialias,
                 )
+            d[key] = tensor
         return d
 
     def get_params(self, image: torch.Tensor) -> tuple[int, int, int, int] | None:
