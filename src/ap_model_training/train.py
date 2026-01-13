@@ -383,6 +383,7 @@ def _train_step(
     log_mlflow: bool = False,
     submit_images: bool = False,
 ) -> float:
+    images.requires_grad_()
     training_objects.optimizer.zero_grad()
     with autocast(training_objects.device.type):
         outputs = training_objects.training_inferer(images, training_objects.model)
