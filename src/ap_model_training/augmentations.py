@@ -510,20 +510,21 @@ class RandResizedCropd(
             size = RandResizedCropd._get_resize_shape(first_data, image_size=self._size)
         else:
             size = self._size
+        params_list: list[tuple[int, int, int, int] | None]
         if self._per_image:
-            params_list = [
+            params_list= [
                 self.get_params(image=first_data[0, ...])
                 for _ in range(first_data.shape[0])
             ]
         else:
-            params = self.get_params(image=first_data)
+            params= self.get_params(image=first_data)
             if params is None:
                 # Skip everything if params is None
                 return d
             params_list = [params]
 
         for key in self.key_iterator(d):
-            d[key] = convert_to_tensor(
+            data = convert_to_tensor(
                 data=d[key], dtype=None, track_meta=get_track_meta()
             )
             if key in (MONAI_KEYS.LABEL, MONAI_KEYS.PRED):
@@ -532,35 +533,63 @@ class RandResizedCropd(
             else:
                 interpolation = self._interpolation
             if self._per_image:
-                batch_size = first_data.shape[0]
-                image_list: list[torch.Tensor] = []
-                for i in range(batch_size):
-                    image = d[key][i, ...].unsqueeze(0)
-                    if params_list[i] is None:
-                        image_list.append(image)
-                    else:
-                        image_list.append(
-                            resized_crop(
-                                image,
-                                *params_list[i],  # type: ignore
-                                size=size,  # type: ignore
-                                interpolation=interpolation,
-                                antialias=self._antialias,
-                            )
-                        )
-                tensor = torch.concatenate(image_list, dim=0)
-            else:
-                if params_list[0] is None:
-                    continue
-                tensor = resized_crop(
+                tensor = self._transform_per_image(
                     d[key],
-                    *params_list[0],  # type: ignore
-                    size=size,  # type: ignore
+                    size=size,
+                    params_list=params_list,
                     interpolation=interpolation,
-                    antialias=self._antialias,
+                )
+            else:
+                tensor = self._transform(
+                    d[key],
+                    size=size,
+                    params=params_list[0],
+                    interpolation=interpolation,
                 )
             d[key] = tensor
         return d
+
+    def _transform(
+        self,
+        data: torch.Tensor,
+        size: tuple[int, int],
+        params: tuple[int, int, int, int] | None,
+        interpolation: InterpolationMode,
+    ) -> torch.Tensor:
+        if params is None:
+            return data
+        return resized_crop(
+            data,
+            *params,  # type: ignore
+            size=size,  # type: ignore
+            interpolation=interpolation,
+            antialias=self._antialias,
+        )
+
+    def _transform_per_image(
+        self,
+        data: torch.Tensor,
+        size: tuple[int, int],
+        params_list: list[tuple[int, int, int, int] | None],
+        interpolation: InterpolationMode,
+    ) -> torch.Tensor:
+        batch_size = data.shape[0]
+        image_list: list[torch.Tensor] = []
+        for i in range(batch_size):
+            image = data[i, ...].unsqueeze(0)
+            if params_list[i] is None:
+                image_list.append(image)
+            else:
+                image_list.append(
+                    resized_crop(
+                        image,
+                        *params_list[i],  # type: ignore
+                        size=size,  # type: ignore
+                        interpolation=interpolation,
+                        antialias=self._antialias,
+                    )
+                )
+        return torch.concatenate(image_list, dim=0)
 
     def get_params(self, image: torch.Tensor) -> tuple[int, int, int, int] | None:
         # Check if it should be done
