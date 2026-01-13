@@ -470,16 +470,17 @@ def train(
         leave=False,
     ):
         clear_memory()
-        step_loss = _train_step(
-            step=epoch_len * epoch + step,
-            images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
-            labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
-            metrics=metrics,
-            training_objects=training_objects,
-            training_parameters=training_parameters,
-            log_mlflow=log_mlflow,
-            submit_images=submit_images,
-        )
+        with torch.device(training_objects.device):
+            step_loss = _train_step(
+                step=epoch_len * epoch + step,
+                images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
+                labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+                metrics=metrics,
+                training_objects=training_objects,
+                training_parameters=training_parameters,
+                log_mlflow=log_mlflow,
+                submit_images=submit_images,
+            )
         loss_list.append(step_loss)
 
         del batch_data
@@ -572,15 +573,16 @@ def validate(
             leave=False,
         ):
             clear_memory()
-            step_loss = _validate_step(
-                step=epoch_len * epoch + step,
-                images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
-                labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
-                metrics=metrics,
-                training_objects=training_objects,
-                training_parameters=training_parameters,
-                log_mlflow=log_mlflow,
-            )
+            with torch.device(training_objects.device):
+                step_loss = _validate_step(
+                    step=epoch_len * epoch + step,
+                    images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
+                    labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+                    metrics=metrics,
+                    training_objects=training_objects,
+                    training_parameters=training_parameters,
+                    log_mlflow=log_mlflow,
+                )
             loss_list.append(step_loss)
 
             del batch_data
