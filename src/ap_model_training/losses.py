@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 
 
 def weights_to_tensor(weights: Sequence[float], device: DeviceLikeType) -> Tensor:
-    return torch.Tensor(weights).to(device)
+    return torch.tensor(weights, device=device)
 
 
 def log_exp_softmax_activation(tensor: torch.Tensor) -> torch.Tensor:
