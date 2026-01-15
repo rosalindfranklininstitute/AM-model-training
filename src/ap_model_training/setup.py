@@ -303,6 +303,8 @@ def setup_training_objects(
     loss_function: _Loss,
     training_batch_size: int,
     validation_batch_size: int,
+    num_training_workers: int | None = None,
+    num_validation_workers: int | None = None,
     learning_rate: float = 1e-4,
     lr_scheduler_name: str = "onecyclelr",
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
@@ -344,6 +346,11 @@ def setup_training_objects(
     grad_scaler = GradScaler(device=device.type)
     # grad_scaler = None
 
+    if num_training_workers is None:
+        num_training_workers = training_batch_size * 4
+    if num_validation_workers is None:
+        num_validation_workers = validation_batch_size * 4
+
     return TrainingObjects(
         training_data,
         validation_data,
@@ -359,8 +366,8 @@ def setup_training_objects(
         post_val_transform=post_val_transform,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
-        training_data_workers=training_batch_size * 2,
-        validation_data_workers=validation_batch_size * 2,
+        training_data_workers=num_training_workers,
+        validation_data_workers=num_validation_workers,
         check_loaders=False,
         **kwargs,
     )

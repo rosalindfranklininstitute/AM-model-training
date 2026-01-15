@@ -56,6 +56,8 @@ def setup_training(
     gpu_number: int | None = None,
     training_batch_size: int = 2,
     validation_batch_size: int = 2,
+    num_training_workers: int | None = None,
+    num_validation_workers: int | None = None,
 ) -> tuple[setup.TrainingObjects, setup.TrainingParameters]:
     if lr_scheduler_kwargs is None:
         lr_scheduler_kwargs = {}
@@ -191,6 +193,8 @@ def setup_training(
         loss_function=loss_function,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
+        num_training_workers=num_training_workers,
+        num_validation_workers=num_validation_workers,
         learning_rate=training_parameters.learning_rate,
         lr_scheduler_name=lr_scheduler_name,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
@@ -224,6 +228,8 @@ def run_training(
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     training_batch_size: int = 2,
     validation_batch_size: int = 2,
+    num_training_workers: int | None = None,
+    num_validation_workers: int | None = None,
     log_mlflow: bool = False,
     submit_training_images: bool = False,
 ) -> None:
@@ -266,6 +272,8 @@ def run_training(
         lr_scheduler_kwargs=lr_scheduler_kwargs,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
+        num_training_workers=num_training_workers,
+        num_validation_workers=num_validation_workers,
         dataset_type=dataset_type,
         dataset_kwargs=dataset_kwargs,
     )
