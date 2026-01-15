@@ -112,6 +112,13 @@ def run(
     # Fix determinism for consistent results
     set_determinism(seed=42)
 
+    pd.DataFrame(training_objects.training_data.data).to_csv(
+        model_path.with_name(f"{model_path.stem}_train_data.csv")
+    )
+    pd.DataFrame(training_objects.validation_data.data).to_csv(
+        model_path.with_name(f"{model_path.stem}_val_data.csv")
+    )
+
     with mlflow.start_run() if log_mlflow else nullcontext():
         if log_mlflow:
             # log model to mlflow
