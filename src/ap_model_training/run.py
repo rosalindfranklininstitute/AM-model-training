@@ -17,7 +17,6 @@ import mlflow
 if typing.TYPE_CHECKING:
     from os import PathLike
 
-
 _logger = logging.getLogger(__package__)
 
 

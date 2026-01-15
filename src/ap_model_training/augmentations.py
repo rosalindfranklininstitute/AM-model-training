@@ -488,12 +488,12 @@ class RandResizedCropd(
             size = self._size
         params_list: list[tuple[int, int, int, int] | None]
         if self._per_image:
-            params_list= [
+            params_list = [
                 self.get_params(image=first_data[0, ...])
                 for _ in range(first_data.shape[0])
             ]
         else:
-            params= self.get_params(image=first_data)
+            params = self.get_params(image=first_data)
             if params is None:
                 # Skip everything if params is None
                 return d
