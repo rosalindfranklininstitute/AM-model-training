@@ -120,7 +120,6 @@ def get_transform_list(
             reverse_indexing=False,
             dtype=np.float32,
         ),
-        # NormalizeInputImagesd([MONAI_KEYS.IMAGE]),
         LoadImaged(
             [MONAI_KEYS.LABEL],
             reader=OpenCVReader,
@@ -202,29 +201,6 @@ def get_transform_list(
         # ),
         # SignalFillEmptyd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
     ]
-
-
-class NormalizeInputImagesd(transforms.transform.MapTransform):
-    def __call__(
-        self, data: Mapping[typing.Any, typing.Any]
-    ) -> Mapping[typing.Any, typing.Any]:
-        d = dict(data)
-        for key in self.key_iterator(d):
-            d[key] = NormalizeInputImagesd._transform(d[key])
-        return d
-
-    @staticmethod
-    def _transform(data: NDArray[typing.Any] | torch.Tensor) -> torch.Tensor:
-        img = convert_to_tensor(data=data, dtype=None, track_meta=get_track_meta())
-        if img.dtype == torch.uint8:
-            max_ = 255.0
-        elif img.dtype == torch.uint16:
-            max_ = 65535.0
-        else:
-            raise ValueError(f"Unsupported image dtype: {img.dtype}")
-        img.to_(torch.float32).div_(max_)
-        return img
-
 
 class NormaliseTransform(transforms.transform.Transform):
     def __init__(self, clamp: tuple[int, int] = (-1, 1)) -> None:
