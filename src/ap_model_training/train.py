@@ -171,8 +171,6 @@ def run(
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
 
-            clear_memory()
-
             pd.DataFrame(
                 [
                     {
@@ -205,7 +203,6 @@ def run(
                 )
 
                 val_epoch_metrics_dict[epoch] = val_epoch_metrics
-                clear_memory()
 
                 epoch_info_str += f", Val Loss: {val_epoch_metrics.loss:.4f}"
 
@@ -259,7 +256,6 @@ def run(
                     )
 
                     val_epoch_metrics_dict[epoch] = val_epoch_metrics
-                    clear_memory()
                 tqdm.write(
                     f"Stopped early after epoch {epoch + 1} due to train stopper"
                 )
@@ -268,7 +264,6 @@ def run(
                     epoch + 1,
                 )
                 break
-
 
         clear_memory()
 
@@ -374,7 +369,6 @@ def submit_validation_images_to_mflow(
             del images
             del labels
             del outputs
-            clear_memory()
 
         mlflow.flush_artifact_async_logging()
         mlflow.flush_async_logging()
@@ -477,7 +471,6 @@ def train(
         unit="step",
         leave=False,
     ):
-        clear_memory()
         with torch.device(training_objects.device):
             step_loss = _train_step(
                 step=epoch_len * epoch + step,
@@ -492,8 +485,6 @@ def train(
         loss_list.append(step_loss)
 
         del batch_data
-
-    clear_memory()
 
     epoch_metrics = metrics.get_epoch_metrics(
         step_losses=loss_list,
@@ -580,7 +571,6 @@ def validate(
             unit="step",
             leave=False,
         ):
-            clear_memory()
             with torch.device(training_objects.device):
                 step_loss = _validate_step(
                     step=epoch_len * epoch + step,
@@ -594,8 +584,6 @@ def validate(
             loss_list.append(step_loss)
 
             del batch_data
-
-        clear_memory()
 
         epoch_metrics = metrics.get_epoch_metrics(
             step_losses=loss_list,
