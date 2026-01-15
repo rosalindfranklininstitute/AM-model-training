@@ -265,8 +265,6 @@ def run(
                 )
                 break
 
-        clear_memory()
-
         print(
             f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
         )
@@ -295,6 +293,8 @@ def run(
                 for epoch in sorted(val_epoch_metrics_dict)
             ]
         ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+
+        clear_memory()
 
         if log_mlflow:
             mlflow.log_param(
