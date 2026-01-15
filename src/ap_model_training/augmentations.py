@@ -117,8 +117,9 @@ def get_transform_list(
     loading = [
         LoadImaged(
             [MONAI_KEYS.IMAGE],
-            reader=OpenCVReader,
-            rescale_input=True,
+            reader=data.image_reader.PILReader,
+            # reader=OpenCVReader,
+            # rescale_input=True,
             image_only=True,
             ensure_channel_first=True,
             reverse_indexing=False,
@@ -126,8 +127,9 @@ def get_transform_list(
         ),
         LoadImaged(
             [MONAI_KEYS.LABEL],
-            reader=OpenCVReader,
-            rescale_input=False,
+            reader=data.image_reader.PILReader,
+            # reader=OpenCVReader,
+            # rescale_input=False,
             image_only=True,
             ensure_channel_first=True,
             reverse_indexing=False,
