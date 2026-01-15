@@ -6,6 +6,8 @@ from os import PathLike
 
 import numpy as np
 
+from monai.data.dataset import Dataset
+
 from ap_model_training import setup
 from ap_model_training import files
 from ap_model_training import train
@@ -34,6 +36,8 @@ def setup_training(
     csv_path: str | PathLike[str] | None = None,
     training_csv_path: str | PathLike[str] | None = None,
     validation_csv_path: str | PathLike[str] | None = None,
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
     image_size: int = 1536,
     pad: bool = True,
     rgb: bool = True,
@@ -62,6 +66,9 @@ def setup_training(
     if loss_kwargs is None:
         loss_kwargs = {}
 
+    if dataset_kwargs is None:
+        dataset_kwargs = {}
+
     if csv_path is None:
         if training_csv_path is None or validation_csv_path is None:
             raise ValueError(
@@ -71,18 +78,20 @@ def setup_training(
             _load_csv(training_csv_path),
             image_size=image_size,
             augmentations=True,
-            dataset_type=setup.CryoSEMDataset,
+            dataset_type=dataset_type,
             pad=pad,
             rgb=rgb,
+            **dataset_kwargs,
         )
         _logger.info("Training dataset loaded from %s", training_csv_path)
         validation_data = setup.create_dataset(
             _load_csv(validation_csv_path),
             image_size=image_size,
             augmentations=False,
-            dataset_type=setup.CryoSEMDataset,
+            dataset_type=dataset_type,
             pad=pad,
             rgb=rgb,
+            **dataset_kwargs,
         )
         _logger.info("Validation dataset loaded from %s", validation_csv_path)
     else:
@@ -90,9 +99,10 @@ def setup_training(
             _load_csv(csv_path),
             image_size=image_size,
             validation_split=validation_split,
-            dataset_type=setup.CryoSEMDataset,
+            dataset_type=dataset_type,
             pad=pad,
             rgb=rgb,
+            **dataset_kwargs,
         )
         _logger.info("Datasets loaded from %s", csv_path)
 
@@ -205,6 +215,8 @@ def run_training(
     pad_images: bool = True,
     rgb_images: bool = True,
     frozen_epochs: int = 0,
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
     model_kwargs: dict[str, typing.Any] | None = None,
     loss_kwargs: dict[str, typing.Any] | None = None,
     include_background: bool = False,
@@ -254,6 +266,8 @@ def run_training(
         lr_scheduler_kwargs=lr_scheduler_kwargs,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
+        dataset_type=dataset_type,
+        dataset_kwargs=dataset_kwargs,
     )
     train.run(
         training_objects,
@@ -276,6 +290,8 @@ def submit_validation_for_mlflow_run(
     cpu_only: bool = False,
     image_size: int = 1536,
     frozen_epochs: int = 0,
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
     model_kwargs: dict[str, typing.Any] | None = None,
     loss_kwargs: dict[str, typing.Any] | None = None,
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
@@ -298,6 +314,8 @@ def submit_validation_for_mlflow_run(
         lr_scheduler_kwargs=lr_scheduler_kwargs,
         include_background=include_background,
         gpu_number=gpu_number,
+        dataset_type=dataset_type,
+        dataset_kwargs=dataset_kwargs,
     )
     if mlflow_run_id is None:
         last_run = mlflow.last_active_run()

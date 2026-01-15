@@ -87,7 +87,7 @@ def create_dataset(
     pad: bool = True,
     rgb: bool = True,
     dataset_type: type[data.Dataset] = data.Dataset,
-    **transform_kwargs: typing.Any,
+    **dataset_kwargs: typing.Any,
 ) -> data.Dataset:
     datalist: Sequence
     if isinstance(input_data, np.ndarray):
@@ -109,9 +109,9 @@ def create_dataset(
                 augmentations=augmentations,
                 pad=pad,
                 rgb=rgb,
-                **transform_kwargs,
             )
         ),
+        **dataset_kwargs,
     )
 
 
@@ -123,7 +123,7 @@ def create_datasets(
     pad: bool = True,
     rgb: bool = True,
     dataset_type: type[data.Dataset] = data.Dataset,
-    **transform_kwargs: typing.Any,
+    **dataset_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
     if isinstance(input_data, np.ndarray):
         datalist = [
@@ -149,7 +149,7 @@ def create_datasets(
             pad=pad,
             rgb=rgb,
             dataset_type=dataset_type,
-            **transform_kwargs,
+            **dataset_kwargs,
         ),
         create_dataset(
             input_data=validate,
@@ -158,7 +158,7 @@ def create_datasets(
             pad=pad,
             rgb=rgb,
             dataset_type=dataset_type,
-            **transform_kwargs,
+            **dataset_kwargs,
         ),
     )
 
