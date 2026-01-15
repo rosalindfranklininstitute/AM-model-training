@@ -16,6 +16,11 @@ from torchvision.transforms.v2 import (
 from torchvision.transforms import RandomResizedCrop
 from torchvision.transforms.functional import resized_crop
 
+from albumentations import (
+    RandomResizedCrop as ARandomResizedCrop,
+    GaussianBlur as AGaussianBlur,
+)
+
 from monai import data, transforms
 from monai.transforms.io.dictionary import LoadImaged
 from monai.transforms.spatial.dictionary import RandAffined, Rand2DElastic
@@ -167,6 +172,14 @@ def get_transform_list(
             interpolation=InterpolationMode.BICUBIC,
             mask_interpolation=InterpolationMode.NEAREST_EXACT,
         ),
+        # AlbumentationsRandResizedCropd(
+        #     [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+        #     size=(1024, 1536),
+        #     scale=(0.7, 1.0),
+        #     ratio=(1.5, 1.5),
+        #     prob=0.3,
+        # ),
+        # AlbumentationsGaussianBlurd([MONAI_KEYS.IMAGE], blur_limit=(3, 5), prob=0.3),
         # Ensure cropping doesn't introduce any NaNs (https://github.com/Project-MONAI/MONAI/discussions/2637):
         # SignalFillEmptyd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]),
         RandGaussianBlurd([MONAI_KEYS.IMAGE], blur_limit=(3, 5), prob=0.3),
@@ -585,3 +598,137 @@ class RandResizedCropd(
         axis_multiplier = np.min(image_size / image_shape_array)
         shape = np.round(image_shape_array * axis_multiplier).astype(np.uint32)
         return (int(shape[0]), int(shape[1]))
+
+
+class AlbumentationsRandResizedCropd(
+    transforms.transform.RandomizableTransform, transforms.transform.MapTransform
+):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        size: tuple[int, int],
+        scale: tuple[float, float] = (0.08, 1.0),
+        ratio: tuple[float, float] = (0.75, 1.3333333333333333),
+        prob: float = 0.3,
+        allow_missing_keys: bool = False,
+    ) -> None:
+        transforms.transform.MapTransform.__init__(
+            self, keys, allow_missing_keys=allow_missing_keys
+        )
+        self._a_transform = ARandomResizedCrop(
+            size=size, scale=scale, ratio=ratio, p=prob
+        )
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        images = d.get(MONAI_KEYS.IMAGE)
+        masks = d.get(MONAI_KEYS.LABEL)
+
+        batch_size = d[self.first_key(d)].shape[0]
+        image_list: list[torch.Tensor] = []
+        mask_list: list[torch.Tensor] = []
+        for i in range(batch_size):
+            if images is None:
+                image = None
+            else:
+                image = images[i, ...]
+            if masks is None:
+                mask = None
+            else:
+                mask = masks[i, ...]
+            image, mask = self._transform(image=image, mask=mask)
+            if image is not None:
+                image_list.append(image)
+            if mask is not None:
+                mask_list.append(mask)
+        if image_list:
+            d[MONAI_KEYS.IMAGE] = torch.stack(image_list, dim=0)
+        if mask_list:
+            d[MONAI_KEYS.LABEL] = torch.stack(mask_list, dim=0)
+        return d
+
+    def _transform(
+        self,
+        image: torch.Tensor | None,
+        mask: torch.Tensor | None,
+    ) -> tuple[torch.Tensor | None, torch.Tensor | None]:
+        output = self._a_transform(
+            image=None if image is None else image.numpy(force=True),
+            mask=None if mask is None else mask.numpy(force=True),
+        )
+        image = output.get("image")
+        if image is not None:
+            image = torch.from_numpy(image).to(torch.float32)
+        mask = output.get("mask")
+        if mask is not None:
+            mask = torch.from_numpy(mask).to(torch.long)
+        return image, mask
+
+
+class AlbumentationsGaussianBlurd(
+    transforms.transform.RandomizableTransform, transforms.transform.MapTransform
+):
+    def __init__(
+        self,
+        keys: KeysCollection,
+        blur_limit: tuple[int, int] | int = 0,
+        sigma_limit: tuple[float, float] | float = (0.5, 3.0),
+        prob: float = 0.5,
+        allow_missing_keys: bool = False,
+    ) -> None:
+        transforms.transform.MapTransform.__init__(
+            self, keys, allow_missing_keys=allow_missing_keys
+        )
+        transforms.transform.MapTransform.__init__(self, keys, allow_missing_keys)
+        self._a_transform = AGaussianBlur(
+            blur_limit=blur_limit, sigma_limit=sigma_limit, p=prob
+        )
+
+    def __call__(
+        self, data: Mapping[typing.Any, typing.Any]
+    ) -> Mapping[typing.Any, typing.Any]:
+        d = dict(data)
+        images = d.get(MONAI_KEYS.IMAGE)
+        masks = d.get(MONAI_KEYS.LABEL)
+
+        batch_size = d[self.first_key(d)].shape[0]
+        image_list: list[torch.Tensor] = []
+        mask_list: list[torch.Tensor] = []
+        for i in range(batch_size):
+            if images is None:
+                image = None
+            else:
+                image = images[i, ...]
+            if masks is None:
+                mask = None
+            else:
+                mask = masks[i, ...]
+            image, mask = self._transform(image=image, mask=mask)
+            if image is not None:
+                image_list.append(image)
+            if mask is not None:
+                mask_list.append(mask)
+        if image_list:
+            d[MONAI_KEYS.IMAGE] = torch.stack(image_list, dim=0)
+        if mask_list:
+            d[MONAI_KEYS.LABEL] = torch.stack(mask_list, dim=0)
+        return d
+
+    def _transform(
+        self,
+        image: torch.Tensor | None,
+        mask: torch.Tensor | None,
+    ) -> tuple[torch.Tensor | None, torch.Tensor | None]:
+        output = self._a_transform(
+            image=None if image is None else image.numpy(force=True),
+            mask=None if mask is None else mask.numpy(force=True),
+        )
+        image = output.get("image")
+        if image is not None:
+            image = torch.from_numpy(image).to(torch.float32)
+        mask = output.get("mask")
+        if mask is not None:
+            mask = torch.from_numpy(mask).to(torch.long)
+        return image, mask
