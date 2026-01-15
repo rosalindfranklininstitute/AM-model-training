@@ -10,7 +10,7 @@ from monai.data.dataset import Dataset
 
 from ap_model_training import setup
 from ap_model_training import files
-from ap_model_training import train
+from ap_model_training.run import train
 from ap_model_training import models
 from ap_model_training import losses
 
