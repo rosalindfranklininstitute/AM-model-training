@@ -244,9 +244,18 @@ def run_training(
     else:
         input_name = Path(csv_path).stem
 
+    timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
+    timestamp_subdirectory = models_dir / timestamp
+    try:
+        timestamp_subdirectory.mkdir()
+    except OSError:
+        _logger.error(
+            "Failed to create timestamp subdirectory '%s'",
+            str(timestamp_subdirectory),
+            exc_info=True,
+        )
     model_save_path = (
-        models_dir
-        / f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{input_name}_{model_name}.pth"
+        timestamp_subdirectory / f"{timestamp}_{input_name}_{model_name}.pth"
     )
     training_objects, training_parameters = setup_training(
         model_save_path=model_save_path,
