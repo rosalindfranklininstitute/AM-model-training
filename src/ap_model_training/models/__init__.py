@@ -1,15 +1,38 @@
 from __future__ import annotations
 import typing
 
+import torch
+
 import segmentation_models_pytorch as smp
 from monai.networks import nets
 
 if typing.TYPE_CHECKING:
+    from os import PathLike
     from collections.abc import Callable
-    import torch
+
+
+def retrain_wrapper(
+    model_creation_function: Callable[..., torch.nn.Module],
+) -> Callable[..., torch.nn.Module]:
+    def wrap(
+        *, weights_file: str | PathLike[str] | None = None, **kwargs: typing.Any
+    ) -> torch.nn.Module:
+        if weights_file is not None:
+            kwargs["pretrained"] = False
+
+        model = model_creation_function(**kwargs)
+
+        if weights_file is not None:
+            state = torch.load(weights_file)
+            model.load_state_dict(state)
+
+        return model
+
+    return wrap
 
 
 def efficientnet_b4_flexibleunet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     pretrained: bool = False,
@@ -25,6 +48,7 @@ def efficientnet_b4_flexibleunet(
 
 
 def smp_efficientnet_b4_unet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
@@ -41,6 +65,7 @@ def smp_efficientnet_b4_unet(
 
 
 def smp_efficientnet_b4_unetplusplus(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     encoder_weights: typing.Literal["imagenet", "advprop"] | None = None,
@@ -57,6 +82,7 @@ def smp_efficientnet_b4_unetplusplus(
 
 
 def unet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -73,6 +99,7 @@ def unet(
 
 
 def dynunet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -89,6 +116,7 @@ def dynunet(
 
 
 def segresnet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -101,6 +129,7 @@ def segresnet(
 
 
 def segresnetds(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -113,6 +142,7 @@ def segresnetds(
 
 
 def segresnetds2(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     **kwargs: typing.Any,
@@ -125,6 +155,7 @@ def segresnetds2(
 
 
 def segresnetvae(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     input_image_size=tuple[int, int],
@@ -140,6 +171,7 @@ def segresnetvae(
 
 
 def smp_fpn(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     pretrained: bool = False,
@@ -156,6 +188,7 @@ def smp_fpn(
 
 
 def smp_manet(
+    *,
     num_channels: int = 3,
     label_count: int = 5,
     pretrained: bool = False,
@@ -182,4 +215,8 @@ model_creation_functions: dict[str, Callable[..., torch.nn.Module]] = {
     "smp_efficientnet_b4_unetplusplus": smp_efficientnet_b4_unetplusplus,
     "smp_fpn": smp_fpn,
     "smp_manet": smp_manet,
+}
+
+model_creation_functions = {
+    k: retrain_wrapper(v) for k, v in model_creation_functions.items()
 }
