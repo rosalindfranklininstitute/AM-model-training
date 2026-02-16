@@ -40,23 +40,23 @@ def setup_training(
     dataset_type: type[Dataset] = Dataset,
     dataset_kwargs: dict[str, typing.Any] | None = None,
     image_size: int = 1536,
-    pad: bool = True,
+    pad: bool = False,
     rgb: bool = True,
     validation_split: float = 0.15,
-    validation_interval: int = 2,
-    loss_name: str = "diceloss",
-    epochs: int = 30,
-    learning_rate: float = 1e-4,
+    validation_interval: int = 1,
+    loss_name: str = "compound_loss",
+    epochs: int = 100,
+    learning_rate: float = 1e-5,
     lr_scheduler_name: str = "onecyclelr",
     cpu_only: bool = False,
     frozen_epochs: int = 0,
     model_kwargs: dict[str, typing.Any] | None = None,
     loss_kwargs: dict[str, typing.Any] | None = None,
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
-    include_background: bool = False,
+    include_background: bool = True,
     gpu_number: int | None = None,
-    training_batch_size: int = 2,
-    validation_batch_size: int = 2,
+    training_batch_size: int = 6,
+    validation_batch_size: int = 1,
     num_training_workers: int | None = None,
     num_validation_workers: int | None = None,
     seed: int = 42,
@@ -210,30 +210,28 @@ def setup_training(
 
 def run_training(
     models_dir: str | PathLike[str],
-    model_name: str,
-    csv_path: str | PathLike[str] | None = None,
-    training_csv_path: str | PathLike[str] | None = None,
-    validation_csv_path: str | PathLike[str] | None = None,
-    loss_name: str = "diceloss",
-    lr_scheduler_name: str = "onecyclelr",
-    epochs: int = 30,
-    learning_rate: float = 1e-4,
+    csv: str | PathLike[str] | tuple[str | PathLike[str], str | PathLike[str]],
     cpu_only: bool = False,
+    gpu_number: int | None = None,
+    validation_interval: int = 1,
+    epochs: int = 100,
+    frozen_epochs: int = 25,
+    model_name: str = "smp_fpn",
+    loss_name: str = "compound_loss",
+    lr_scheduler_name: str = "onecyclelr",
+    learning_rate: float = 1e-5,
     validation_split: float = 0.15,
-    validation_interval: int = 2,
     image_size: int = 1536,
-    pad_images: bool = True,
+    pad_images: bool = False,
     rgb_images: bool = True,
-    frozen_epochs: int = 0,
     dataset_type: type[Dataset] = Dataset,
     dataset_kwargs: dict[str, typing.Any] | None = None,
     model_kwargs: dict[str, typing.Any] | None = None,
     loss_kwargs: dict[str, typing.Any] | None = None,
-    include_background: bool = False,
-    gpu_number: int | None = None,
+    include_background: bool = True,
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
-    training_batch_size: int = 2,
-    validation_batch_size: int = 2,
+    training_batch_size: int = 6,
+    validation_batch_size: int = 1,
     num_training_workers: int | None = None,
     num_validation_workers: int | None = None,
     log_mlflow: bool = False,
@@ -242,14 +240,16 @@ def run_training(
 ) -> None:
     models_dir = Path(models_dir)
 
-    if csv_path is None:
-        if training_csv_path is None or validation_csv_path is None:
-            raise ValueError(
-                "Either 'csv_path' or 'training_csv_path' and 'validation_csv_path' must be given."
-            )
-        input_name = f"{Path(training_csv_path).stem}_{Path(validation_csv_path).stem}"
+    if isinstance(csv, tuple):
+        csv_path = None
+        training_csv_path = Path(csv[0])
+        validation_csv_path = Path(csv[1])
+        input_name = f"{training_csv_path.stem}_{validation_csv_path.stem}"
     else:
-        input_name = Path(csv_path).stem
+        csv_path = Path(csv)
+        training_csv_path = None
+        validation_csv_path = None
+        input_name = csv_path.stem
 
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
     timestamp_subdirectory = models_dir / timestamp
