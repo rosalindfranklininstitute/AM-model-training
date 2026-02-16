@@ -343,7 +343,8 @@ def _train_step(
     # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
     loss_value = loss.item()
     if np.isnan(loss_value):
-        raise ValueError(f"NaN loss returned during training step {step}")
+        _logger.warning("Loss for training step %i is NaN", step)
+        tqdm.write(f"Loss for training step {step} is NaN")
 
     outputs = torch.stack(
         [
@@ -352,7 +353,8 @@ def _train_step(
         ]
     )
     if log_mlflow:
-        mlflow.log_metric("train_loss", loss_value, step=step)
+        if not np.isnan(loss_value):
+            mlflow.log_metric("train_loss", loss_value, step=step)
         if submit_images:
             submit_images_to_mlflow(
                 images,

@@ -1,8 +1,8 @@
 from __future__ import annotations
 import typing
-from statistics import mean
 from dataclasses import dataclass, field, fields, InitVar, asdict
 
+import numpy as np
 import torch
 from torchmetrics.segmentation import DiceScore, MeanIoU
 from torchmetrics.classification import (
@@ -160,7 +160,7 @@ class Metrics:
         return MetricsOutput(
             weights=weights,
             device=device,
-            loss=float(mean(step_losses)),
+            loss=float(np.nanmean(tuple(step_losses))),
             **kwargs,
         )
 

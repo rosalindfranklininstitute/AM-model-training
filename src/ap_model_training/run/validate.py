@@ -189,7 +189,11 @@ def _validate_step(
         loss = training_objects.loss_function(outputs, labels)
 
     loss_value = loss.item()
-    if log_mlflow:
+
+    if np.isnan(loss_value):
+        _logger.warning("Loss for training step %i is NaN", step)
+        tqdm.write(f"Loss for training step {step} is NaN")
+    elif log_mlflow:
         mlflow.log_metric("val_loss", loss_value, step=step)
 
     del images
