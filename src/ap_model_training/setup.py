@@ -205,7 +205,7 @@ class TrainingObjects:
     validation_data: data.Dataset
     device: torch.device
     model: torch.nn.Module
-    loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    loss_function: torch.nn.Module
     optimizer: torch.optim.Optimizer
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
     train_metrics: Metrics
@@ -251,7 +251,7 @@ def setup_training_objects(
     validation_data: data.Dataset,
     num_classes: int,
     model: torch.nn.Module,
-    loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    loss_function: torch.nn.Module,
     training_batch_size: int,
     validation_batch_size: int,
     num_training_workers: int | None = None,

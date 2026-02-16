@@ -87,6 +87,8 @@ def diceceloss(
         to_onehot_y=True,
         other_act=log_exp_softmax_activation,
         weight=weights,
+        smooth_nr=1e-7,
+        smooth_dr=1e-7,
         lambda_dice=0.5,
         lambda_ce=0.5,
     )
@@ -161,36 +163,36 @@ def crossentropyloss(
     )
 
 
-# Compound loss function
-def compound_loss(
-    weights: Tensor, alpha: float = 0.5, **kwargs
-) -> Callable[[Tensor, Tensor], Tensor]:
-    # Define individual loss components
-    ce_loss = torch.nn.CrossEntropyLoss(weight=weights)
-
-    def weighted_dice_loss(outputs: Tensor, masks: Tensor) -> Tensor:
-        dice = smp.losses.DiceLoss(
+class CustomDiceCELoss(torch.nn.Module):
+    def __init__(self, weight: Tensor, alpha: float = 0.5) -> None:
+        super().__init__()
+        self.register_buffer("weight", weight)
+        self.weight: Tensor
+        self.alpha = alpha
+        # Define individual loss components
+        self._ce_loss = torch.nn.CrossEntropyLoss(weight=self.weight)
+        self._dice_loss = smp.losses.DiceLoss(
             mode="multiclass", from_logits=True
         )  # Using multiclass mode without 'reduction'
-        loss_per_class = dice(outputs, masks)
-        weighted_loss = (loss_per_class * weights).mean()
-        return weighted_loss
 
-    def loss_function(outputs: Tensor, targets: Tensor) -> Tensor:
-        if len(targets.shape) > 3:
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        if len(target.shape) > 3:
             # Squeeze channels
             with torch.no_grad():
-                targets = targets.view(targets.shape[0], *targets.shape[2:])
-        return alpha * ce_loss(outputs, targets) + (1 - alpha) * weighted_dice_loss(
-            outputs, targets
-        )
+                target = target.view(target.shape[0], *target.shape[2:])
 
-    return loss_function
+        dice_loss_per_class = self._dice_loss(input, target)
+        weighted_dice_loss = (dice_loss_per_class * self.weight).mean()
+        return self.alpha * self._ce_loss(input, target) + (
+            1 - self.alpha
+        ) * weighted_dice_loss(input, target)
 
 
-loss_creation_functions: dict[
-    str, Callable[..., Callable[[Tensor, Tensor], Tensor]]
-] = {
+def compound_loss(weights: Tensor, alpha: float = 0.5, **kwargs) -> CustomDiceCELoss:
+    return CustomDiceCELoss(weight=weights, alpha=alpha)
+
+
+loss_creation_functions: dict[str, Callable[..., torch.nn.Module]] = {
     "diceloss": diceloss,
     "diceceloss": diceceloss,
     "dicefocalloss": dicefocalloss,
