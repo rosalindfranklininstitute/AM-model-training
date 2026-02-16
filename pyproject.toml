@@ -1,6 +1,7 @@
 [build-system]
 requires = [
     "setuptools >= 77.0.3, < 81",
+    "setuptools_scm",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -34,14 +35,14 @@ dependencies = [
 ]
 
 [project.urls]
-"Source" = "https://github.com/rosalindfranklininstitute/adaptive_polish"
-"Tracker" = "https://github.com/rosalindfranklininstitute/adaptive_polish/issues"
+"Source" = "https://github.com/rosalindfranklininstitute/adaptive-milling-training"
+"Tracker" = "https://github.com/rosalindfranklininstitute/adaptive-milling-training/issues"
 
 [tool.setuptools.dynamic]
 readme = { file = "README.md", content-type = "text/markdown" }
 
 [tool.setuptools_scm]
-version_file = "adaptive_polish/_version.py"
+version_file = "src/ap_model_training/_version.py"
 
 [tool.setuptools.packages.find]
 where = [
