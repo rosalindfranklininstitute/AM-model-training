@@ -7,6 +7,7 @@ from os import PathLike
 import numpy as np
 
 from monai.data.dataset import Dataset
+from monai.utils import set_determinism
 
 from ap_model_training import setup
 from ap_model_training import files
@@ -58,7 +59,11 @@ def setup_training(
     validation_batch_size: int = 2,
     num_training_workers: int | None = None,
     num_validation_workers: int | None = None,
+    seed: int = 42,
 ) -> tuple[setup.TrainingObjects, setup.TrainingParameters]:
+    # Fix determinism for consistent results
+    set_determinism(seed=seed)
+
     if lr_scheduler_kwargs is None:
         lr_scheduler_kwargs = {}
 
@@ -143,6 +148,7 @@ def setup_training(
         loss_weights=loss_kwargs.get("weights", None),
         include_background=include_background,
         val_interval=validation_interval,
+        seed=seed,
     )
 
     model_kwargs.update(
@@ -232,6 +238,7 @@ def run_training(
     num_validation_workers: int | None = None,
     log_mlflow: bool = False,
     submit_training_images: bool = False,
+    seed: int = 42,
 ) -> None:
     models_dir = Path(models_dir)
 
@@ -285,6 +292,7 @@ def run_training(
         num_validation_workers=num_validation_workers,
         dataset_type=dataset_type,
         dataset_kwargs=dataset_kwargs,
+        seed=seed,
     )
     train.run(
         training_objects,
@@ -314,6 +322,7 @@ def submit_validation_for_mlflow_run(
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
     include_background: bool = False,
     gpu_number: int | None = None,
+    seed: int = 42,
 ) -> None:
     training_objects, training_parameters = setup_training(
         csv_path=csv_path,
@@ -333,6 +342,7 @@ def submit_validation_for_mlflow_run(
         gpu_number=gpu_number,
         dataset_type=dataset_type,
         dataset_kwargs=dataset_kwargs,
+        seed=seed,
     )
     if mlflow_run_id is None:
         last_run = mlflow.last_active_run()

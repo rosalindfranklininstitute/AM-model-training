@@ -25,7 +25,6 @@ except ImportError:
     from tqdm import tqdm
 
 from monai.data import decollate_batch
-from monai.utils import set_determinism
 
 from ap_model_training.utils import MONAI_KEYS
 from ap_model_training.metrics import MetricsOutput, Metrics
@@ -94,9 +93,6 @@ def run(
 
     train_stopper = EarlyStopper(patience=training_parameters.train_patience)
     val_stopper = EarlyStopper(patience=training_parameters.val_patience)
-
-    # Fix determinism for consistent results
-    set_determinism(seed=42)
 
     pd.DataFrame(training_objects.training_data.data).to_csv(
         model_path.with_name(f"{model_path.stem}_train_data.csv")
