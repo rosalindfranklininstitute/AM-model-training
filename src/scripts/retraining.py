@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import typing
 
-from ap_model_training.main import main
+from ap_model_training.main import train
 from ap_model_training.utils import combine_csvs
 
 if typing.TYPE_CHECKING:
@@ -19,17 +19,17 @@ if __name__ == "__main__":
     # Use this to determine which lamelae will be used for training (useful to figure out how many lamellae we need to get a good model)
     csv = combine_csvs(*retrain_csvs[:], output_path=csv_path)
 
-    main(
+    train(
         save_directory=save_directory,
         csv=csv,
         weights_path=weights_path,
         max_epochs=20,
         frozen_epochs=5,
-        validation_split=0.15, # Ignored if csv is passed as a tuple of training and validation csvs
+        validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
         cpu_only=False,
         gpu_number=0,
         training_batch_size=6,
         validation_batch_size=1,
         log_mlflow=False,
-        mlflow_experiment_name="ap_model_retraining"
+        mlflow_experiment_name="ap_model_retraining",
     )

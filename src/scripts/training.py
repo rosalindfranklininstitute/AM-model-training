@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 
-from ap_model_training.main import main
+from ap_model_training.main import train
 
 if __name__ == "__main__":
     # Input file paths
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     save_directory = Path.cwd() / "models"
     save_directory.mkdir(exist_ok=True)
 
-    main(
+    train(
         save_directory=save_directory,
         csv=(train_csv, validate_csv),
         max_epochs=100,

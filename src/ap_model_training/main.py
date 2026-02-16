@@ -29,7 +29,7 @@ _stream_handler.setFormatter(_logging_formatter)
 _logger.addHandler(_stream_handler)
 
 
-def main(
+def train(
     save_directory: str | PathLike[str],
     csv: str | PathLike[str] | tuple[str | PathLike[str], str | PathLike[str]],
     max_epochs: int,
