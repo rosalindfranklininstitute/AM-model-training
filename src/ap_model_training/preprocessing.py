@@ -13,7 +13,6 @@ from albumentations.pytorch import ToTensorV2
 _logger = logging.getLogger(__name__)
 
 
-
 def get_train_transform(
     image_size: int, normalise_first: bool, rgb: bool, pad: bool
 ) -> A.Compose:
@@ -42,7 +41,6 @@ def get_val_transform(
             ToTensorV2(),
         ]
     )
-
 
 
 def tensor_to_numpy(tensor: torch.Tensor) -> np.typing.NDArray:
@@ -157,7 +155,7 @@ def resize_pytorch(
         target_shape = _get_resize_shape(image, image_size)
     return v2.functional.resize(
         image,
-        target_shape,
+        list(target_shape),
         interpolation=InterpolationMode.NEAREST_EXACT
         if mask
         else InterpolationMode.BICUBIC,
@@ -307,7 +305,7 @@ if __name__ == "__main__":
         mask,
         cmap=LABEL_CMAP,
         vmin=0,
-        vmax=len(LABEL_CMAP.colors),
+        vmax=len(LABEL_CMAP.colors),  # type: ignore
         interpolation="none",
     )
     axs[1, 0].set_title(f"Mask: {mask.shape}")
@@ -316,7 +314,7 @@ if __name__ == "__main__":
         tensor_to_numpy(mask_tensor),
         cmap=LABEL_CMAP,
         vmin=0,
-        vmax=len(LABEL_CMAP.colors),
+        vmax=len(LABEL_CMAP.colors),  # type: ignore
         interpolation="none",
     )
     axs[1, 1].set_title(f"Mask (preprocessed): {mask_tensor.shape}")
