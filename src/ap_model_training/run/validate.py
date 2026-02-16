@@ -67,10 +67,10 @@ def run(
     model_path = Path(training_parameters.model_path)
 
     pd.DataFrame(training_objects.training_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_train_data.csv")
+        model_path.with_name(f"{model_path.stem}_train_data.csv"), index=False
     )
     pd.DataFrame(training_objects.validation_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_val_data.csv")
+        model_path.with_name(f"{model_path.stem}_val_data.csv"), index=False
     )
 
     with mlflow.start_run() if log_mlflow else nullcontext():

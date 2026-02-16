@@ -6,7 +6,6 @@ import typing
 
 import mlflow
 import torch
-import pandas as pd
 
 from ap_model_training import run
 from ap_model_training.utils import MONAI_LOG_DIR
@@ -111,16 +110,3 @@ def main(
             mlflow.end_run()
         except:  # noqa: E722
             _logger.error("Failed to end MLFlow run", exc_info=True)
-
-
-def combine_csvs(
-    *csvs: str | PathLike[str], output_path: str | PathLike[str]
-) -> str | PathLike[str]:
-    if len(csvs) == 1:
-        return csvs[0]
-    dfs: list[pd.DataFrame] = [
-        pd.read_csv(csv, index_col=None, header=0) for csv in csvs
-    ]
-    merged_df = pd.concat(dfs, axis=0, ignore_index=True)
-    merged_df.to_csv(output_path)
-    return output_path
