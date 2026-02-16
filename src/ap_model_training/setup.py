@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-import cv2
 
 import torch
 from torch.amp.grad_scaler import GradScaler
@@ -16,7 +15,6 @@ from monai import data, transforms, optimizers, inferers
 
 from ap_model_training.schedulers import lr_scheduler_creation_functions
 from ap_model_training.augmentations import get_transform_list
-from ap_model_training.preprocessing import get_train_transform, get_val_transform
 from ap_model_training.utils import MONAI_KEYS
 from ap_model_training.metrics import Metrics
 
@@ -28,55 +26,7 @@ if typing.TYPE_CHECKING:
     from matplotlib.axes import Axes
     from torch.nn.modules.loss import _Loss
 
-
 _logger = logging.getLogger("adaptive_milling_training")
-
-
-# Dataset
-class CryoSEMDataset(data.Dataset):
-    def __init__(
-        self,
-        data: list[dict[MONAI_KEYS, str]],
-        transform=None,
-    ) -> None:
-        self._data = data
-        self.transform = transform
-
-    def set_random_state(self, seed: int, *args, **kwargs) -> None:
-        return
-
-    def __len__(self) -> int:
-        return len(self._data)
-
-    def __getitem__(self, idx) -> dict[MONAI_KEYS, torch.Tensor]:
-        img_path = self._data[idx][MONAI_KEYS.IMAGE]
-        mask_path = self._data[idx][MONAI_KEYS.LABEL]
-
-        img = np.asarray(cv2.imread(str(img_path), cv2.IMREAD_UNCHANGED))
-        # Dynamically normalize image to [0, 1] based on dtype
-        if img.dtype == np.uint8:
-            img = img.astype(np.float32) / 255.0
-        elif img.dtype == np.uint16:
-            img = img.astype(np.float32) / 65535.0
-        else:
-            raise ValueError(f"Unsupported image dtype: {img.dtype}")
-
-        # img = cv2.imread(str(img_path), cv2.IMREAD_UNCHANGED).astype(np.float32)
-        mask = np.asarray(cv2.imread(str(mask_path), cv2.IMREAD_UNCHANGED))
-
-        if self.transform:
-            augmented = self.transform(image=img, mask=mask)
-            img, mask = augmented["image"], augmented["mask"]
-            if len(mask.shape) == 2:
-                mask = torch.unsqueeze(mask, 0)
-
-        # Ensure mask is a tensor and of type long
-        return {
-            MONAI_KEYS.IMAGE: torch.tensor(img),
-            MONAI_KEYS.LABEL: torch.tensor(mask, dtype=torch.long)
-            if not isinstance(mask, torch.Tensor)
-            else mask.long(),
-        }
 
 
 def create_dataset(
