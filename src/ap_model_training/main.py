@@ -33,10 +33,10 @@ _logger.addHandler(_stream_handler)
 def main(
     save_directory: str | PathLike[str],
     csv: str | PathLike[str] | tuple[str | PathLike[str], str | PathLike[str]],
-    weights_path: str | PathLike[str] | None,
     max_epochs: int,
     frozen_epochs: int,
     validation_split: float = 0.15,  # Ignored if two csv files given
+    weights_path: str | PathLike[str] | None = None,
     cpu_only: bool = False,
     gpu_number: int = 0,
     training_batch_size: int = 6,
