@@ -8,33 +8,27 @@ if typing.TYPE_CHECKING:
     from os import PathLike
 
 if __name__ == "__main__":
-    # Input file paths
-    all_files_csv = (
-        "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files4.csv"
-    )
-    train_csv = "/ceph/users/tpr78264/code/adaptive_milling_monai/training_data.csv"
-    validate_csv = (
-        "/ceph/users/tpr78264/code/adaptive_milling_monai/validation_data.csv"
-    )
-
-    save_directory = Path.cwd() / "models"
+    weights_path = Path()  # The path to the existing model weights
+    save_directory = Path() # The path where models will be saved
     csv_path = save_directory / "combined.csv"  # Make sure you don't overwrite this
 
     # put list of paths here
     retrain_csvs: list[str | PathLike[str]] = []
 
+
     csv = combine_csvs(*retrain_csvs[:], output_path=csv_path)
 
     main(
         save_directory=save_directory,
-        csv=(train_csv, validate_csv),
-        max_epochs=100,
-        frozen_epochs=25,
-        validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
+        csv=csv,
+        weights_path=weights_path,
+        max_epochs=20,
+        frozen_epochs=5,
+        validation_split=0.15, # Ignored if csv is passed as a tuple of training and validation csvs
         cpu_only=False,
         gpu_number=0,
         training_batch_size=6,
         validation_batch_size=1,
         log_mlflow=False,
-        mlflow_experiment_name="ap_model_training",
+        mlflow_experiment_name="ap_model_retraining"
     )
