@@ -197,6 +197,7 @@ class TrainingParameters:
     best_metrics: dict[str, dict[str, float]] = field(init=False)
     include_background: bool = False
     val_interval: int = 2
+    seed: int = 42
 
     def __post_init__(self):
         self.current_metrics = {"train": {}, "val": {}}
