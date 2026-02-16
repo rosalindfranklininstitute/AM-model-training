@@ -1,11 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
-import typing
 
-from ap_model_training.main import main, combine_csvs
-
-if typing.TYPE_CHECKING:
-    from os import PathLike
+from ap_model_training.main import main
 
 if __name__ == "__main__":
     # Input file paths
@@ -18,12 +14,7 @@ if __name__ == "__main__":
     )
 
     save_directory = Path.cwd() / "models"
-    csv_path = save_directory / "combined.csv"  # Make sure you don't overwrite this
-
-    # put list of paths here
-    retrain_csvs: list[str | PathLike[str]] = []
-
-    csv = combine_csvs(*retrain_csvs[:], output_path=csv_path)
+    save_directory.mkdir(exist_ok=True)
 
     main(
         save_directory=save_directory,
@@ -31,7 +22,7 @@ if __name__ == "__main__":
         max_epochs=100,
         frozen_epochs=25,
         validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
-        cpu_only=False,
+        cpu_only=True,
         gpu_number=0,
         training_batch_size=6,
         validation_batch_size=1,
