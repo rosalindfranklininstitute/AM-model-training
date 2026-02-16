@@ -12,10 +12,10 @@ if __name__ == "__main__":
     save_directory = Path() # The path where models will be saved
     csv_path = save_directory / "combined.csv"  # Make sure you don't overwrite this
 
-    # put list of paths here
+    # Put list of paths here, one per lamella
     retrain_csvs: list[str | PathLike[str]] = []
 
-
+    # Use this to determine which lamelae will be used for training (useful to figure out how many lamellae we need to get a good model)
     csv = combine_csvs(*retrain_csvs[:], output_path=csv_path)
 
     main(
