@@ -2,10 +2,11 @@ from __future__ import annotations
 import logging
 import typing
 import time
-import pandas as pd
+import json
 from pathlib import Path
 from contextlib import nullcontext
 
+import pandas as pd
 import numpy as np
 
 import torch
@@ -275,6 +276,9 @@ def run(
                 for epoch in sorted(val_epoch_metrics_dict)
             ]
         ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+
+        with model_path.with_name("training_parameters.json").open("w+") as f:
+            json.dump(training_parameters.asdict(include_metrics=True), f)
 
         clear_memory()
 
