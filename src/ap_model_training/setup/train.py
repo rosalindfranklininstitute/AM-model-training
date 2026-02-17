@@ -2,124 +2,23 @@ from __future__ import annotations
 import logging
 import typing
 from dataclasses import dataclass, field, InitVar, asdict
-from collections.abc import Sequence
 
 import numpy as np
-import pandas as pd
 
 import torch
 from torch.amp.grad_scaler import GradScaler
 
 from monai.utils.misc import first
-from monai import data, transforms, optimizers, inferers
+from monai import data, transforms, inferers
 
 from ap_model_training.schedulers import lr_scheduler_creation_functions
-from ap_model_training.augmentations import get_transform_list
-from ap_model_training.utils import MONAI_KEYS
 from ap_model_training.metrics import Metrics
 
 if typing.TYPE_CHECKING:
     from os import PathLike
     from collections.abc import Callable, Mapping
 
-    from numpy.typing import NDArray
-    from matplotlib.axes import Axes
-    from torch.nn.modules.loss import _Loss
-
-_logger = logging.getLogger("adaptive_milling_training")
-
-
-def create_dataset(
-    input_data: NDArray[np.str_] | pd.DataFrame | Sequence,
-    image_size: int,
-    augmentations: bool,
-    *,
-    pad: bool = True,
-    rgb: bool = True,
-    dataset_type: type[data.Dataset] = data.Dataset,
-    **dataset_kwargs: typing.Any,
-) -> data.Dataset:
-    datalist: Sequence
-    if isinstance(input_data, np.ndarray):
-        datalist = [
-            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
-        ]
-    elif isinstance(input_data, pd.DataFrame):
-        datalist = input_data.to_dict(orient="records")
-    elif isinstance(input_data, Sequence):
-        datalist = input_data
-    else:
-        raise TypeError(f"Unsupported data type '{type(data)}'")
-
-    return dataset_type(
-        data=datalist,
-        transform=transforms.Compose(
-            get_transform_list(
-                image_size=image_size,
-                augmentations=augmentations,
-                pad=pad,
-                rgb=rgb,
-            )
-        ),
-        **dataset_kwargs,
-    )
-
-
-def create_datasets(
-    input_data: NDArray[np.str_] | pd.DataFrame,
-    image_size: int,
-    validation_split: float = 0.2,
-    *,
-    pad: bool = True,
-    rgb: bool = True,
-    dataset_type: type[data.Dataset] = data.Dataset,
-    **dataset_kwargs: typing.Any,
-) -> tuple[data.Dataset, data.Dataset]:
-    if isinstance(input_data, np.ndarray):
-        datalist = [
-            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
-        ]
-    elif isinstance(input_data, pd.DataFrame):
-        datalist = input_data.to_dict(orient="records")
-    else:
-        raise TypeError(f"Unsupported data type '{type(data)}'")
-    train, validate = data.partition_dataset(
-        datalist,
-        ratios=(1 - validation_split, validation_split),
-        num_partitions=2,
-        seed=42,
-        shuffle=False,
-    )
-
-    return (
-        create_dataset(
-            input_data=train,
-            image_size=image_size,
-            augmentations=True,
-            pad=pad,
-            rgb=rgb,
-            dataset_type=dataset_type,
-            **dataset_kwargs,
-        ),
-        create_dataset(
-            input_data=validate,
-            image_size=image_size,
-            augmentations=False,
-            pad=pad,
-            rgb=rgb,
-            dataset_type=dataset_type,
-            **dataset_kwargs,
-        ),
-    )
-
-
-def get_device(cpu_only: bool = False, gpu: int | None = None) -> torch.device:
-    gpu_str = "cuda"
-    if gpu is not None:
-        gpu_str += f":{gpu}"
-    return torch.device(
-        gpu_str if not cpu_only and torch.cuda.is_available() else "cpu"
-    )
+_logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -232,17 +131,56 @@ class TrainingObjects:
         validation_batch_size: int,
         check_loaders: bool,
     ) -> None:
-        self.training_dataloader, self.validation_dataloader = load_data(
-            self,
-            training_batch_size=training_batch_size,
-            validation_batch_size=validation_batch_size,
+        self.training_dataloader, self.validation_dataloader = self.load_data(
             check_data_loads=check_loaders,
             training_workers=training_data_workers,
+            training_batch_size=training_batch_size,
+            validation_batch_size=validation_batch_size,
             validation_workers=validation_data_workers,
         )
 
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)
+
+    def load_data(
+        self,
+        training_workers: int,
+        validation_workers: int,
+        training_batch_size: int,
+        validation_batch_size: int,
+        check_data_loads: bool = True,
+    ) -> tuple[data.dataloader.DataLoader, data.dataloader.DataLoader]:
+        pin_memory = self.device.type == "cuda"
+
+        if check_data_loads:
+            # Check data loads
+            check_loader = data.DataLoader(
+                self.training_data,
+                batch_size=10,
+                num_workers=2,
+                pin_memory=pin_memory,
+            )
+            first_batch = first(check_loader)
+            assert first_batch is not None, "DataLoader check failed"
+
+        training_dataloader = data.dataloader.DataLoader(
+            self.training_data,
+            batch_size=training_batch_size,
+            shuffle=True,
+            num_workers=training_workers,
+            pin_memory=pin_memory,
+            persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
+        )
+
+        validation_dataloader = data.dataloader.DataLoader(
+            self.validation_data,
+            batch_size=validation_batch_size,
+            shuffle=False,
+            num_workers=validation_workers,
+            pin_memory=pin_memory,
+            persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
+        )
+        return training_dataloader, validation_dataloader
 
 
 def setup_training_objects(
@@ -315,81 +253,10 @@ def setup_training_objects(
         val_metrics=val_metrics,
         post_train_transform=post_train_transform,
         post_val_transform=post_val_transform,
-        training_batch_size=training_batch_size,
-        validation_batch_size=validation_batch_size,
         training_data_workers=num_training_workers,
         validation_data_workers=num_validation_workers,
+        training_batch_size=training_batch_size,
+        validation_batch_size=validation_batch_size,
         check_loaders=False,
         **kwargs,
     )
-
-
-def load_data(
-    training_objects: TrainingObjects,
-    training_batch_size: int,
-    validation_batch_size: int,
-    check_data_loads: bool = True,
-    training_workers: int = 4,
-    validation_workers: int = 1,
-) -> tuple[data.dataloader.DataLoader, data.dataloader.DataLoader]:
-    pin_memory = training_objects.device.type == "cuda"
-
-    if check_data_loads:
-        # Check data loads
-        check_loader = data.DataLoader(
-            training_objects.training_data,
-            batch_size=10,
-            num_workers=2,
-            pin_memory=pin_memory,
-        )
-        first_batch = first(check_loader)
-        assert first_batch is not None, "DataLoader check failed"
-
-    training_dataloader = data.dataloader.DataLoader(
-        training_objects.training_data,
-        batch_size=training_batch_size,
-        shuffle=True,
-        num_workers=training_workers,
-        pin_memory=pin_memory,
-        persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
-    )
-
-    validation_dataloader = data.dataloader.DataLoader(
-        training_objects.validation_data,
-        batch_size=validation_batch_size,
-        shuffle=False,
-        num_workers=validation_workers,
-        pin_memory=pin_memory,
-        persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
-    )
-    return training_dataloader, validation_dataloader
-
-
-def find_learning_rate(
-    ax: Axes,
-    training_objects: TrainingObjects,
-    lower_learning_rate: float = 1e-7,
-    upper_learning_rate: float = 1e-2,
-    iterations: int = 20,
-    amp: bool = True,
-) -> None:
-    lr_finder = optimizers.LearningRateFinder(
-        model=training_objects.model,
-        optimizer=training_objects.optimizer,
-        criterion=training_objects.loss_function,
-        device=training_objects.device,
-    )
-    lr_finder.range_test(
-        training_objects.training_dataloader,
-        training_objects.validation_dataloader,
-        start_lr=lower_learning_rate,
-        end_lr=upper_learning_rate,
-        num_iter=iterations,
-    )
-    # for grad, loss in zip(*lr_finder.get_lrs_and_losses())
-    #     print(f"Gradient, loss: {grad}, {loss}")
-    sg, sg_loss = lr_finder.get_steepest_gradient()
-    msg = f"Steepest gradient: {sg:2e}, loss: {sg_loss:2e}"
-    print(msg)
-    _ = lr_finder.plot(ax=ax)
-    ax.set_title(msg)
