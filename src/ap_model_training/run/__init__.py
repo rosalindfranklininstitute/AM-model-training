@@ -19,11 +19,12 @@ import mlflow
 
 if typing.TYPE_CHECKING:
     from os import PathLike
+    from pandas import DataFrame
 
 _logger = logging.getLogger(__package__)
 
 
-def _load_csv(path: str | PathLike[str]):
+def _load_csv(path: str | PathLike[str]) -> DataFrame:
     csv_path = Path(path).absolute()
     if not csv_path.is_file():
         raise FileNotFoundError(path)
