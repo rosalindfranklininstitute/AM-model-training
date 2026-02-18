@@ -29,7 +29,11 @@ from monai.data import decollate_batch
 
 from ap_model_training.utils import MONAI_KEYS
 from ap_model_training.metrics import MetricsOutput, Metrics
-from ap_model_training.run.utils import clear_memory, get_metrics_to_log
+from ap_model_training.run.utils import (
+    clear_memory,
+    get_mean_of_key_metrics,
+    get_metrics_to_log,
+)
 from ap_model_training.run.mlflow import (
     log_training_objects_to_mlflow,
     submit_images_to_mlflow,
@@ -418,19 +422,31 @@ def train(
         weights=training_parameters.loss_weights,
         device=training_objects.device,
     )
-    metrics.reset()
-    metrics_to_log, best_epoch = get_metrics_to_log(
-        epoch + 1,
-        "train",
-        training_parameters,
-        **epoch_metrics.to_dict(
-            split_labels=True,
-            labels=training_parameters.label_names,
-            prefix="epoch",
-        ),
+
+    epoch_metrics_dict = epoch_metrics.to_dict(
+        split_labels=True,
+        labels=training_parameters.label_names,
+        prefix="epoch",
     )
 
+    get_mean_of_key_metrics(
+        metrics_dict=epoch_metrics_dict,
+        key_metrics=training_parameters.key_train_metrics,
+    )
+
+    best_epoch = training_parameters.update_metrics(
+        epoch=epoch + 1, metrics=epoch_metrics_dict, stage="train"
+    )
+
+    metrics.reset()
+
     if log_mlflow:
+        metrics_to_log = get_metrics_to_log(
+            "train",
+            training_parameters.current_metrics["train"],
+            training_parameters.label_names,
+        )
+
         mlflow.log_metrics(
             metrics_to_log,
             step=epoch + 1,

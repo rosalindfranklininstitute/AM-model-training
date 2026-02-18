@@ -6,9 +6,14 @@ import numpy as np
 import torch
 
 if typing.TYPE_CHECKING:
-    from ap_model_training.setup import TrainingParameters
+    from collections.abc import Iterable
 
-__all__ = ["get_model_artifact_path", "clear_memory", "get_metrics_to_log"]
+__all__ = [
+    "get_model_artifact_path",
+    "clear_memory",
+    "get_mean_of_key_metrics",
+    "get_metrics_to_log",
+]
 
 
 def get_model_artifact_path(epoch: int) -> str:
@@ -21,36 +26,30 @@ def clear_memory() -> None:
         gc.collect()
         torch.cuda.empty_cache()
 
+def get_mean_of_key_metrics(
+    metrics_dict: dict[str, float], key_metrics: Iterable[str]
+) -> float:
+    value = np.mean(tuple(metrics_dict[k] for k in key_metrics)).item()
+    metrics_dict["mean_of_key_metrics"] = value
+    return value
+
 
 def get_metrics_to_log(
-    epoch: int,
-    stage: typing.Literal["train", "val"],
-    training_parameters: TrainingParameters,
-    **epoch_metrics: float,
-) -> tuple[dict[str, float], bool]:
-    # Calculate mean metric
-    epoch_metrics["mean_of_key_metrics"] = np.mean(
-        tuple(
-            epoch_metrics[k]
-            for k in getattr(training_parameters, f"key_{stage}_metrics")
-        )
-    ).item()
-
-    best_epoch = training_parameters.update_metrics(
-        epoch=epoch, metrics=epoch_metrics, stage=stage
-    )
-
+    stage: typing.Literal["train", "val", "eval"],
+    metrics: dict[str, float],
+    label_names: Iterable[str],
+) -> dict[str, float]:
     metrics_to_log: dict[str, float] = {}
-    for metric_name, values in training_parameters.current_metrics[stage].items():
+    for metric_name, values in metrics.items():
         if metric_name == "epoch":
             # Don't log epoch to MLFlow or you'll get a graph of y=x.
             continue
         metric_key = f"{stage}_{metric_name}"  # Prepend stage to log train and val metrics separately
         if isinstance(values, np.ndarray):
             # If it's a numpy array, assume it's per-class and log those separately (and the mean)
-            for label_name, v in zip(training_parameters.label_names, values):
+            for label_name, v in zip(label_names, values):
                 metrics_to_log[f"{metric_key}_{label_name}"] = v
             metrics_to_log[f"{metric_key}_mean"] = values.mean()
         else:
             metrics_to_log[metric_key] = values
-    return metrics_to_log, best_epoch
+    return metrics_to_log
