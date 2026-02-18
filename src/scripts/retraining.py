@@ -10,8 +10,8 @@ if typing.TYPE_CHECKING:
 
 if __name__ == "__main__":
     weights_path = Path()  # The path to the existing model weights
-    save_directory = Path() # The path where models will be saved
-    csv_path = save_directory / "combined.csv"  # Make sure you don't overwrite this
+    output_path = Path()  # The path where models will be saved
+    csv_path = output_path / "combined.csv"  # Make sure you don't overwrite this
 
     # Put list of paths here, one per lamella
     retrain_csvs: list[str | PathLike[str]] = []
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     csv = combine_csvs(*retrain_csvs[:], output_path=csv_path)
 
     train(
-        save_directory=save_directory,
+        output_path=output_path,
         csv=csv,
         weights_path=weights_path,
         max_epochs=20,

@@ -90,16 +90,16 @@ def run(
     submit_training_images: bool = False,
     log_mlflow: bool = False,
 ) -> None:
-    model_path = Path(training_parameters.model_path)
-
     train_stopper = EarlyStopper(patience=training_parameters.train_patience)
     val_stopper = EarlyStopper(patience=training_parameters.val_patience)
 
+    output_path = Path(training_parameters.output_path)
+
     pd.DataFrame(training_objects.training_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_train_data.csv"), index=False
+        output_path / f"{training_parameters.run_id}_train_data.csv", index=False
     )
     pd.DataFrame(training_objects.validation_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_val_data.csv"), index=False
+        output_path / f"{training_parameters.run_id}_val_data.csv", index=False
     )
 
     with mlflow.start_run() if log_mlflow else nullcontext():
@@ -141,6 +141,10 @@ def run(
             total=training_parameters.max_epochs,
             initial=1,
         ):
+            epoch_model_path = (
+                output_path / f"{training_parameters.run_id}_epoch{epoch + 1:03}.pth"
+            )
+
             train_epoch_metrics = None
             val_epoch_metrics = None
             # print("-" * 10)
@@ -165,7 +169,7 @@ def run(
                     }
                     for epoch in sorted(train_epoch_metrics_dict)
                 ]
-            ).to_csv(model_path.with_name(f"{model_path.stem}_train_metrics.csv"))
+            ).to_csv(output_path / f"{training_parameters.run_id}_train_metrics.csv")
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
                 # Unfreeze (no need if it wasn't frozen)
@@ -178,9 +182,7 @@ def run(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
-                    model_path=model_path.with_stem(
-                        f"{model_path.stem}_epoch{epoch + 1:03}"
-                    ),
+                    model_path=epoch_model_path,
                     model_signature=model_signature,
                     log_mlflow=log_mlflow,
                 )
@@ -202,7 +204,7 @@ def run(
                     }
                     for epoch in sorted(val_epoch_metrics_dict)
                 ]
-            ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+            ).to_csv(output_path / f"{training_parameters.run_id}_val_metrics.csv")
 
             if val_epoch_metrics is not None:
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
@@ -231,9 +233,7 @@ def run(
                         training_objects,
                         training_parameters,
                         epoch=epoch,
-                        model_path=model_path.with_stem(
-                            f"{model_path.stem}_epoch{epoch + 1:03}"
-                        ),
+                        model_path=epoch_model_path,
                         model_signature=model_signature,
                         log_mlflow=log_mlflow,
                     )
@@ -262,7 +262,7 @@ def run(
                 }
                 for epoch in sorted(train_epoch_metrics_dict)
             ]
-        ).to_csv(model_path.with_name(f"{model_path.stem}_train_metrics.csv"))
+        ).to_csv(output_path / f"{training_parameters.run_id}_train_metrics.csv")
 
         pd.DataFrame(
             [
@@ -275,9 +275,9 @@ def run(
                 }
                 for epoch in sorted(val_epoch_metrics_dict)
             ]
-        ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+        ).to_csv(output_path / f"{training_parameters.run_id}_val_metrics.csv")
 
-        with model_path.with_name("training_parameters.json").open("w+") as f:
+        with (output_path / "training_parameters.json").open("w+") as f:
             json.dump(training_parameters.asdict(include_metrics=True), f)
 
         clear_memory()

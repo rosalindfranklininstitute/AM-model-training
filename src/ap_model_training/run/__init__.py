@@ -33,7 +33,8 @@ def _load_csv(path: str | PathLike[str]) -> DataFrame:
 
 
 def setup_training(
-    model_save_path: str | PathLike[str],
+    output_path: str | PathLike[str],
+    run_id: str,
     model_name: str,
     csv_path: str | PathLike[str] | None = None,
     training_csv_path: str | PathLike[str] | None = None,
@@ -122,8 +123,11 @@ def setup_training(
     label_names = ("padding", "background", "gis", "lamella", "crack", "vacuum")
 
     training_parameters = setup.TrainingParameters(
+        output_path=output_path,
+        run_id=run_id,
+        model_name=model_name,
         num_classes=num_classes,
-        num_channels=3,
+        num_channels=3 if rgb else 1,
         label_names=label_names[2 - int(pad) - int(include_background) :],
         input_image_shape=(image_size, image_size),
         learning_rate=learning_rate,
@@ -137,7 +141,6 @@ def setup_training(
             "epoch_weighted_average_dice",
         ],
         max_epochs=epochs,
-        model_path=model_save_path,
         train_patience=20,
         val_patience=10,
         total_training_data=len(training_data),
@@ -176,7 +179,6 @@ def setup_training(
 
     loss_function = losses.loss_creation_functions[loss_name](**loss_kwargs)
 
-    _logger.info("The model will be saved as '%s'", model_save_path)
     _logger.info("Starting training...")
 
     steps_per_epoch = int(
@@ -210,7 +212,7 @@ def setup_training(
 
 
 def run_training(
-    models_dir: str | PathLike[str],
+    output_path: str | PathLike[str],
     csv: str | PathLike[str] | tuple[str | PathLike[str], str | PathLike[str]],
     cpu_only: bool = False,
     gpu_number: int | None = None,
@@ -239,7 +241,7 @@ def run_training(
     submit_training_images: bool = False,
     seed: int = 42,
 ) -> None:
-    models_dir = Path(models_dir)
+    output_path = Path(output_path)
 
     if isinstance(csv, tuple):
         csv_path = None
@@ -253,7 +255,7 @@ def run_training(
         input_name = csv_path.stem
 
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    timestamp_subdirectory = models_dir / timestamp
+    timestamp_subdirectory = output_path / timestamp
     try:
         timestamp_subdirectory.mkdir()
     except OSError:
@@ -262,11 +264,9 @@ def run_training(
             str(timestamp_subdirectory),
             exc_info=True,
         )
-    model_save_path = (
-        timestamp_subdirectory / f"{timestamp}_{input_name}_{model_name}.pth"
-    )
     training_objects, training_parameters = setup_training(
-        model_save_path=model_save_path,
+        output_path=timestamp_subdirectory,
+        run_id=f"{timestamp}_{input_name}_{model_name}",
         model_name=model_name,
         csv_path=csv_path,
         training_csv_path=training_csv_path,
@@ -305,7 +305,8 @@ def run_training(
 
 def submit_validation_for_mlflow_run(
     mlflow_run_id: str,
-    model_save_path: str | PathLike[str],
+    output_path: str | PathLike[str],
+    run_id: str,
     epoch: int,
     csv_path: str | PathLike[str],
     model_name: str,
@@ -326,8 +327,9 @@ def submit_validation_for_mlflow_run(
     seed: int = 42,
 ) -> None:
     training_objects, training_parameters = setup_training(
+        output_path=output_path,
+        run_id=run_id,
         csv_path=csv_path,
-        model_save_path=model_save_path,
         model_name=model_name,
         loss_name=loss_name,
         epochs=epochs,

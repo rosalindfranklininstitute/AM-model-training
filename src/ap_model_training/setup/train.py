@@ -23,6 +23,9 @@ _logger = logging.getLogger(__name__)
 
 @dataclass
 class TrainingParameters:
+    output_path: str | PathLike[str]
+    run_id: str
+    model_name: str
     num_classes: int
     num_channels: int
     label_names: tuple[str, ...]
@@ -30,7 +33,6 @@ class TrainingParameters:
     learning_rate: float
     best_metric: str
     max_epochs: int
-    model_path: str | PathLike[str]
     train_patience: int
     val_patience: int
     total_training_data: int

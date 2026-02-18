@@ -45,7 +45,7 @@ def submit_validation_images_to_mflow(
     epoch: int,
 ) -> None:
     # Log images using the best val epoch model
-    model_path = Path(training_parameters.model_path)
+    model_path = Path(training_parameters.output_path) / training_parameters.model_name
     training_objects.model.load_state_dict(
         state_dict=torch.load(
             model_path.with_stem(f"{model_path.stem}_epoch{epoch:03}"),

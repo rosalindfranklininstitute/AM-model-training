@@ -13,11 +13,11 @@ if __name__ == "__main__":
         "/ceph/users/tpr78264/code/adaptive_milling_monai/validation_data.csv"
     )
 
-    save_directory = Path.cwd() / "models"
-    save_directory.mkdir(exist_ok=True)
+    output_path = Path.cwd() / "models"
+    output_path.mkdir(exist_ok=True)
 
     train(
-        save_directory=save_directory,
+        output_path=output_path,
         csv=(train_csv, validate_csv),
         max_epochs=100,
         frozen_epochs=25,

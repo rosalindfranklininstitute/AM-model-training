@@ -30,7 +30,7 @@ _logger.addHandler(_stream_handler)
 
 
 def train(
-    save_directory: str | PathLike[str],
+    output_path: str | PathLike[str],
     csv: str | PathLike[str] | tuple[str | PathLike[str], str | PathLike[str]],
     max_epochs: int,
     frozen_epochs: int,
@@ -63,11 +63,11 @@ def train(
         _logger.addHandler(_file_handler)
 
     try:
-        models_dir = Path(save_directory)
-        models_dir.mkdir(exist_ok=True)
+        output_path = Path(output_path)
+        output_path.mkdir(exist_ok=True)
 
         run.run_training(
-            models_dir=models_dir,
+            output_path=output_path,
             model_name="smp_fpn",
             csv=csv,
             validation_split=validation_split,
