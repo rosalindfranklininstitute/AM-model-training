@@ -69,7 +69,7 @@ class EvaluationObjects:
         batch_size: int,
         check_loaders: bool,
     ) -> None:
-        self.training_dataloader, self.validation_dataloader = self.load_data(
+        self.dataloader = self.load_data(
             workers=data_workers,
             batch_size=batch_size,
             check_data_loads=check_loaders,
