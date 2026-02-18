@@ -37,15 +37,15 @@ class EvaluationParameters:
 
     def update_metrics(
         self,
-        epoch: int,
         metrics: Mapping[str, float],
     ) -> None:
-        metrics_dict = dict(metrics)
-        metrics_dict["epoch"] = epoch
-        self.metrics = metrics_dict
+        self.metrics = dict(metrics)
 
-    def asdict(self) -> dict[str, typing.Any]:
-        return asdict(self)
+    def asdict(self, include_metrics: bool = False) -> dict[str, typing.Any]:
+        d = asdict(self)
+        if not include_metrics:
+            del d["metrics"]
+        return d
 
 
 @dataclass
@@ -56,7 +56,7 @@ class EvaluationObjects:
     loss_function: torch.nn.Module
     metrics: Metrics
     post_transform: transforms.Transform | Callable = lambda x: x
-    inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
+    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     dataloader: data.dataloader.DataLoader = field(init=False)
     # InitVars:
     data_workers: InitVar[int] = 4

@@ -11,7 +11,7 @@ from monai.utils import set_determinism
 
 from ap_model_training import setup
 from ap_model_training import files
-from ap_model_training.run import train
+from ap_model_training.run import train, validate
 from ap_model_training import models
 from ap_model_training import losses
 
@@ -299,6 +299,182 @@ def run_training(
         training_objects,
         training_parameters=training_parameters,
         submit_training_images=submit_training_images,
+        log_mlflow=log_mlflow,
+    )
+
+
+def setup_evaluation(
+    output_path: str | PathLike[str],
+    weights_file: str | PathLike[str],
+    run_id: str,
+    model_name: str,
+    csv_path: str | PathLike[str],
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
+    image_size: int = 1536,
+    pad: bool = False,
+    rgb: bool = True,
+    loss_name: str = "compound_loss",
+    cpu_only: bool = False,
+    model_kwargs: dict[str, typing.Any] | None = None,
+    loss_kwargs: dict[str, typing.Any] | None = None,
+    include_background: bool = True,
+    gpu_number: int | None = None,
+    batch_size: int = 1,
+    num_workers: int | None = None,
+    seed: int = 42,
+) -> tuple[setup.EvaluationObjects, setup.EvaluationParameters]:
+    # Fix determinism for consistent results
+    set_determinism(seed=seed)
+
+    if model_kwargs is None:
+        model_kwargs = {}
+    model_kwargs["weights_file"] = weights_file
+
+    if loss_kwargs is None:
+        loss_kwargs = {}
+
+    if dataset_kwargs is None:
+        dataset_kwargs = {}
+
+    data = setup.create_dataset(
+        _load_csv(csv_path),
+        image_size=image_size,
+        augmentations=False,
+        dataset_type=dataset_type,
+        pad=pad,
+        rgb=rgb,
+        **dataset_kwargs,
+    )
+    _logger.info("Dataset loaded from %s", csv_path)
+
+    num_classes = 5
+    foreground_labels = (1, 2, 3)  # before background is added
+
+    device = setup.get_device(cpu_only, gpu=gpu_number)
+
+    label_names = ("padding", "background", "gis", "lamella", "crack", "vacuum")
+
+    evaluation_parameters = setup.EvaluationParameters(
+        output_path=output_path,
+        run_id=run_id,
+        num_classes=num_classes,
+        num_channels=3 if rgb else 1,
+        label_names=label_names[2 - int(pad) - int(include_background) :],
+        input_image_shape=(image_size, image_size),
+        weights_file=weights_file,
+        total_data=len(data),
+        batch_size=batch_size,
+        key_metrics=[
+            "epoch_weighted_average_iou",
+            "epoch_weighted_average_dice",
+        ],
+        foreground_labels=foreground_labels,
+        loss_weights=loss_kwargs.get("weights", None),
+        include_background=include_background,
+        seed=seed,
+    )
+
+    model_kwargs.update(
+        {
+            "label_count": evaluation_parameters.num_classes,
+            # + 1,  # for background (always included in model)
+            "input_image_size": evaluation_parameters.input_image_shape,
+        }
+    )
+    loss_kwargs.update(
+        {
+            "num_classes": evaluation_parameters.num_classes
+            + 1
+            - int(include_background),
+            "include_background": evaluation_parameters.include_background,
+        }
+    )
+    if loss_kwargs.get("weights") is not None:
+        loss_kwargs["weights"] = losses.weights_to_tensor(
+            loss_kwargs["weights"], device=device
+        ).detach()
+
+    model_creator = models.model_creation_functions[model_name]
+
+    loss_function = losses.loss_creation_functions[loss_name](**loss_kwargs)
+
+    _logger.info("Starting evaluation...")
+
+    model = model_creator(**model_kwargs)
+    evaluation_objects = setup.setup_evaulation_objects(
+        device,
+        data=data,
+        num_classes=num_classes,
+        model=model,
+        loss_function=loss_function,
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+    return evaluation_objects, evaluation_parameters
+
+
+def run_evaluation(
+    output_path: str | PathLike[str],
+    weights_file: str | PathLike[str],
+    model_name: str,
+    csv: str | PathLike[str],
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
+    image_size: int = 1536,
+    pad_images: bool = False,
+    rgb_images: bool = True,
+    loss_name: str = "compound_loss",
+    cpu_only: bool = False,
+    model_kwargs: dict[str, typing.Any] | None = None,
+    loss_kwargs: dict[str, typing.Any] | None = None,
+    include_background: bool = True,
+    gpu_number: int | None = None,
+    batch_size: int = 1,
+    num_workers: int | None = None,
+    log_mlflow: bool = False,
+    submit_training_images: bool = False,
+    seed: int = 42,
+) -> None:
+    weights_file = Path(weights_file)
+    output_path = Path(output_path)
+    csv_path = Path(csv)
+    input_name = csv_path.stem
+
+    timestamp_subdirectory = output_path / f"{weights_file.stem}_{input_name}"
+    try:
+        timestamp_subdirectory.mkdir()
+    except OSError:
+        _logger.error(
+            "Failed to create timestamp subdirectory '%s'",
+            str(timestamp_subdirectory),
+            exc_info=True,
+        )
+
+    evaulation_objects, evaluation_parameters = setup_evaluation(
+        output_path=output_path,
+        weights_file=weights_file,
+        run_id=f"{model_name}_{weights_file.stem}_{input_name}",
+        model_name=model_name,
+        csv_path=csv_path,
+        image_size=image_size,
+        pad=pad_images,
+        rgb=rgb_images,
+        loss_name=loss_name,
+        cpu_only=cpu_only,
+        model_kwargs=model_kwargs,
+        loss_kwargs=loss_kwargs,
+        include_background=include_background,
+        gpu_number=gpu_number,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        dataset_type=dataset_type,
+        dataset_kwargs=dataset_kwargs,
+        seed=seed,
+    )
+    validate.evaluate(
+        evaluation_objects=evaulation_objects,
+        evaluation_parameters=evaluation_parameters,
         log_mlflow=log_mlflow,
     )
 

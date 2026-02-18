@@ -1,8 +1,8 @@
 from __future__ import annotations
 import logging
+import json
 import typing
 from pathlib import Path
-from contextlib import nullcontext
 from importlib.metadata import distributions
 
 import pandas as pd
@@ -33,19 +33,21 @@ from ap_model_training.run.utils import (
     get_metrics_to_log,
     get_model_artifact_path,
 )
-from ap_model_training.run.mlflow import (
-    log_training_objects_to_mlflow,
-    submit_validation_images_to_mflow,
-)
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from ap_model_training.setup import TrainingObjects, TrainingParameters
+    from ap_model_training.setup import (
+        TrainingObjects,
+        TrainingParameters,
+        EvaluationObjects,
+        EvaluationParameters,
+    )
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 _logger = logging.getLogger("adaptive_milling_training")
+
 
 def get_requirements() -> list[str]:
     requirements: list[str] = []
@@ -59,120 +61,84 @@ def get_requirements() -> list[str]:
 PIP_REQUIREMENTS = get_requirements()
 
 
-def run(
-    training_objects: TrainingObjects,
-    training_parameters: TrainingParameters,
+def evaluate(
+    evaluation_objects: EvaluationObjects,
+    evaluation_parameters: EvaluationParameters,
     log_mlflow: bool = False,
-) -> None:
-    model_path = Path(training_parameters.model_path)
+) -> MetricsOutput:
+    output_path = Path(evaluation_parameters.output_path)
 
-    pd.DataFrame(training_objects.training_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_train_data.csv"), index=False
-    )
-    pd.DataFrame(training_objects.validation_data.data).to_csv(
-        model_path.with_name(f"{model_path.stem}_val_data.csv"), index=False
+    validation_length = int(
+        np.ceil(evaluation_parameters.total_data / evaluation_parameters.batch_size)
     )
 
-    with mlflow.start_run() if log_mlflow else nullcontext():
-        if log_mlflow:
-            # log model to mlflow
-            input_array = np.random.uniform(
-                size=(
-                    1,
-                    training_parameters.num_channels,
-                    *training_parameters.input_image_shape,
-                )
-            ).astype(np.float32)
-            model_signature = mlflow.models.infer_signature(
-                input_array,
-                training_objects.model(
-                    torch.from_numpy(input_array).to(training_objects.device)
-                ).numpy(force=True),
-            )
-            del input_array
+    metrics = evaluation_objects.metrics
+    metrics.reset()
+    evaluation_objects.model.eval()
 
-            mlflow.log_params(training_parameters.asdict(include_metrics=False))
-
-            log_training_objects_to_mlflow(training_objects)
-        else:
-            model_signature = None
-
-        if training_parameters.frozen_epochs > 0:
-            # Freeze model if some initial epochs will be frozen
-            for param in training_objects.model.encoder.parameters():  # type: ignore
-                param.requires_grad = False
-
-        val_epoch_metrics_dict: dict[int, MetricsOutput] = {}
-        epoch: int = 1
-        for epoch in tqdm(
-            range(training_parameters.max_epochs),
-            desc="Training progress",
-            unit="epoch",
-            total=training_parameters.max_epochs,
-            initial=1,
+    loss_list: list[float] = []
+    with torch.no_grad():
+        for step, batch_data in tqdm(
+            enumerate(evaluation_objects.dataloader, 1),
+            desc=f"{Path(evaluation_parameters.weights_file).name} validation",
+            total=validation_length,
+            unit="step",
+            leave=False,
         ):
-            val_epoch_metrics = None
+            with torch.device(evaluation_objects.device):
+                step_loss = _validate_step(
+                    step=step,
+                    images=batch_data[MONAI_KEYS.IMAGE].to(evaluation_objects.device),
+                    labels=batch_data[MONAI_KEYS.LABEL].to(evaluation_objects.device),
+                    metrics=metrics,
+                    training_objects=evaluation_objects,
+                    log_mlflow=log_mlflow,
+                )
+            loss_list.append(step_loss)
 
-            val_epoch_metrics, _ = validate(
-                training_objects,
-                training_parameters,
-                epoch=epoch,
-                model_path=model_path.with_stem(
-                    f"{model_path.stem}_epoch{epoch + 1:03}"
-                ),
-                model_signature=model_signature,
-                log_mlflow=log_mlflow,
-            )
+            del batch_data
 
-            val_epoch_metrics_dict[epoch] = val_epoch_metrics
+        eval_metrics = metrics.get_epoch_metrics(
+            step_losses=loss_list,
+            weights=evaluation_parameters.loss_weights,
+            device=evaluation_objects.device,
+        )
 
-            epoch_info_str = f"Epoch {epoch + 1}/{training_parameters.max_epochs}, Val Loss: {val_epoch_metrics.loss:.4f}"
+    eval_metrics_dict = eval_metrics.to_dict(
+        split_labels=True,
+        labels=evaluation_parameters.label_names,
+    )
 
-            tqdm.write(epoch_info_str)
+    get_mean_of_key_metrics(
+        metrics_dict=eval_metrics_dict,
+        key_metrics=evaluation_parameters.key_metrics,
+    )
 
-            pd.DataFrame(
-                [
-                    {
-                        "epoch": epoch,
-                        **val_epoch_metrics_dict[epoch].to_dict(
-                            split_labels=True,
-                            labels=training_parameters.label_names,
-                        ),
-                    }
-                    for epoch in sorted(val_epoch_metrics_dict)
-                ]
-            ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+    stage = "eval"
+    evaluation_parameters.update_metrics(metrics=eval_metrics_dict)
 
-        pd.DataFrame(
-            [
-                {
-                    "epoch": epoch,
-                    **val_epoch_metrics_dict[epoch].to_dict(
-                        split_labels=True,
-                        labels=training_parameters.label_names,
-                    ),
-                }
-                for epoch in sorted(val_epoch_metrics_dict)
-            ]
-        ).to_csv(model_path.with_name(f"{model_path.stem}_val_metrics.csv"))
+    metrics.reset()
 
-        clear_memory()
+    if log_mlflow:
+        metrics_to_log = get_metrics_to_log(
+            stage,
+            evaluation_parameters.metrics,
+            evaluation_parameters.label_names,
+        )
 
-        if log_mlflow:
-            mlflow.log_param(
-                "best_train_metrics",
-                training_parameters.best_metrics["train"],
-            )
-            mlflow.log_param(
-                "best_val_metrics",
-                training_parameters.best_metrics["val"],
-            )
-            best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
-            submit_validation_images_to_mflow(
-                training_objects=training_objects,
-                training_parameters=training_parameters,
-                epoch=best_val_epoch,
-            )
+        mlflow.log_metrics(
+            metrics_to_log,
+            step=0,
+        )
+
+    pd.DataFrame(eval_metrics_dict).to_csv(
+        output_path / f"{evaluation_parameters.run_id}_eval_metrics.csv"
+    )
+
+    with (output_path / "training_parameters.json").open("w+") as f:
+        json.dump(evaluation_parameters.asdict(include_metrics=True), f)
+
+    return eval_metrics
 
 
 def _validate_step(
@@ -180,8 +146,7 @@ def _validate_step(
     images: torch.Tensor,
     labels: torch.Tensor,
     metrics: Metrics,
-    training_objects: TrainingObjects,
-    training_parameters: TrainingParameters,
+    training_objects: TrainingObjects | EvaluationObjects,
     log_mlflow: bool = False,
 ) -> float:
     with autocast(training_objects.device.type):
@@ -246,7 +211,6 @@ def validate(
                     labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
                     metrics=metrics,
                     training_objects=training_objects,
-                    training_parameters=training_parameters,
                     log_mlflow=log_mlflow,
                 )
             loss_list.append(step_loss)
