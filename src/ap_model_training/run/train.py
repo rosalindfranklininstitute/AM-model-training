@@ -348,7 +348,7 @@ def _train_step(
 
     outputs = torch.stack(
         [
-            training_objects.post_train_transform(_)
+            training_objects.post_transform(_)
             for _ in decollate_batch(outputs)  # type: ignore
         ]
     )

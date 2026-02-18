@@ -203,7 +203,7 @@ def _validate_step(
         y=labels,
         y_pred=torch.stack(
             [
-                training_objects.post_val_transform(_)
+                training_objects.post_transform(_)
                 for _ in decollate_batch(outputs)  # type: ignore
             ],
         ),

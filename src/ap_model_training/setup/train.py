@@ -110,8 +110,7 @@ class TrainingObjects:
     train_metrics: Metrics
     val_metrics: Metrics
     grad_scaler: GradScaler | None = None
-    post_train_transform: transforms.Transform | Callable = lambda x: x
-    post_val_transform: transforms.Transform | Callable = lambda x: x
+    post_transform: transforms.Transform | Callable = lambda x: x
     training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     training_dataloader: data.dataloader.DataLoader = field(init=False)
@@ -206,16 +205,7 @@ def setup_training_objects(
 
     val_metrics = Metrics(device=device, num_classes=num_classes)
 
-    post_train_transform = transforms.Compose(
-        [
-            transforms.AsDiscrete(
-                argmax=True,
-                dtype=torch.long,
-            ),
-        ]
-    )
-
-    post_val_transform = transforms.Compose(
+    post_transform = transforms.Compose(
         [
             transforms.AsDiscrete(
                 argmax=True,
@@ -251,8 +241,7 @@ def setup_training_objects(
         grad_scaler=grad_scaler,
         train_metrics=train_metrics,
         val_metrics=val_metrics,
-        post_train_transform=post_train_transform,
-        post_val_transform=post_val_transform,
+        post_transform=post_transform,
         training_data_workers=num_training_workers,
         validation_data_workers=num_validation_workers,
         training_batch_size=training_batch_size,
