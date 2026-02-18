@@ -265,6 +265,8 @@ def run_training(
             str(timestamp_subdirectory),
             exc_info=True,
         )
+        raise
+
     training_objects, training_parameters = setup_training(
         output_path=timestamp_subdirectory,
         run_id=f"{timestamp}_{input_name}_{model_name}",
@@ -442,18 +444,19 @@ def run_evaluation(
     csv_path = Path(csv)
     input_name = csv_path.stem
 
-    timestamp_subdirectory = output_path / f"{weights_file.stem}_{input_name}"
+    subdirectory = output_path / f"{weights_file.stem}_{input_name}"
     try:
-        timestamp_subdirectory.mkdir()
+        subdirectory.mkdir()
     except OSError:
         _logger.error(
-            "Failed to create timestamp subdirectory '%s'",
-            str(timestamp_subdirectory),
+            "Failed to create subdirectory '%s'",
+            str(subdirectory),
             exc_info=True,
         )
+        raise
 
     evaulation_objects, evaluation_parameters = setup_evaluation(
-        output_path=output_path,
+        output_path=subdirectory,
         weights_file=weights_file,
         run_id=f"{model_name}_{weights_file.stem}_{input_name}",
         model_name=model_name,
