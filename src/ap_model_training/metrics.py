@@ -5,60 +5,85 @@ from dataclasses import dataclass, field, fields, InitVar, asdict
 import numpy as np
 import torch
 from torchmetrics.segmentation import DiceScore, MeanIoU
-from torchmetrics.classification import (
-    MulticlassAccuracy,
-    MulticlassPrecision,
-    MulticlassF1Score,
-    MulticlassRecall,
-)
+from torchmetrics.classification import MulticlassConfusionMatrix
 
 if typing.TYPE_CHECKING:
     from collections.abc import Collection, Sequence, Iterable
 
 
+def get_metrics_from_confusion_matrix(
+    confusion_matrix: torch.Tensor | None,
+) -> (
+    tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+    | tuple[None, None, None, None]
+):
+    if confusion_matrix is None:
+        return None, None, None, None
+    tp = confusion_matrix.diag()
+    fp = confusion_matrix.sum(0) - tp
+    fn = confusion_matrix.sum(1) - tp
+
+    accuracy = tp / (tp + fn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f1 = 2 * (precision * recall) / (precision + recall)
+    return (
+        torch.nan_to_num(f1),
+        torch.nan_to_num(accuracy),
+        torch.nan_to_num(precision),
+        torch.nan_to_num(recall),
+    )
+
+
 @dataclass
 class MetricsOutput:
-    weights: InitVar[Sequence[float] | None]
     device: InitVar[torch.device | None]
-
     loss: float
+    weights: Sequence[float] | None | None = None
 
-    iou: torch.Tensor
+    confusion_matrix: torch.Tensor | None = None
+
+    iou: torch.Tensor | None = None
     mean_iou: float = field(init=False)
     weighted_average_iou: float | None = field(init=False, default=None)
 
-    dice: torch.Tensor
+    dice: torch.Tensor | None = None
     mean_dice: float = field(init=False)
     weighted_average_dice: float | None = field(init=False, default=None)
 
-    f1: torch.Tensor
+    # Calculated from confusion matrix (and weights):
+    f1: torch.Tensor | None = field(init=False)
     mean_f1: float = field(init=False)
     weighted_average_f1: float | None = field(init=False, default=None)
 
-    accuracy: torch.Tensor
+    accuracy: torch.Tensor | None = field(init=False)
     mean_accuracy: float = field(init=False)
     weighted_average_accuracy: float | None = field(init=False, default=None)
 
-    precision: torch.Tensor
+    precision: torch.Tensor | None = field(init=False)
     mean_precision: float = field(init=False)
     weighted_average_precision: float | None = field(init=False, default=None)
 
-    recall: torch.Tensor
+    recall: torch.Tensor | None = field(init=False)
     mean_recall: float = field(init=False)
     weighted_average_recall: float | None = field(init=False, default=None)
 
-    def __post_init__(
-        self, weights: Sequence[float] | None, device: torch.device | None
-    ) -> None:
-        if weights is None or device is None:
+    def __post_init__(self, device: torch.device | None) -> None:
+        self.f1, self.accuracy, self.precision, self.recall = (
+            get_metrics_from_confusion_matrix(confusion_matrix=self.confusion_matrix)
+        )
+
+        if self.weights is None or device is None:
             weights_tensor = None
         else:
-            weights_tensor = torch.Tensor(weights).to(device)
+            weights_tensor = torch.Tensor(self.weights).to(device)
 
         for f in fields(self):
-            if not f.init or f.name == "loss":
+            if not f.init or f.name in ("weights", "loss", "confusion_matrix"):
                 continue
             value = getattr(self, f.name)
+            if value is None:
+                continue
             mean = torch.nanmean(value)
             object.__setattr__(self, f"mean_{f.name}", mean.item())
             if weights_tensor is not None:
@@ -99,30 +124,20 @@ class MetricsOutput:
 class Metrics:
     device: InitVar[torch.device]
     num_classes: InitVar[int]
+    confusion_matrix: MulticlassConfusionMatrix = field(init=False)
     iou: MeanIoU = field(init=False)
     dice: DiceScore = field(init=False)
-    f1: MulticlassF1Score = field(init=False)
-    accuracy: MulticlassAccuracy = field(init=False)
-    precision: MulticlassPrecision = field(init=False)
-    recall: MulticlassRecall = field(init=False)
 
     def __post_init__(self, device: torch.device, num_classes: int) -> None:
+        self.confusion_matrix = MulticlassConfusionMatrix(num_classes=num_classes).to(
+            device
+        )
         self.iou = MeanIoU(
             num_classes=num_classes, per_class=True, input_format="index"
         ).to(device)
         self.dice = DiceScore(
             num_classes=num_classes, average="none", input_format="index"
         ).to(device)
-        self.f1 = MulticlassF1Score(num_classes=num_classes, average="none").to(device)
-        self.accuracy = MulticlassAccuracy(num_classes=num_classes, average="none").to(
-            device
-        )
-        self.precision = MulticlassPrecision(
-            num_classes=num_classes, average="none"
-        ).to(device)
-        self.recall = MulticlassRecall(num_classes=num_classes, average="none").to(
-            device
-        )
 
     def update(
         self,
@@ -144,9 +159,9 @@ class Metrics:
             f.name: getattr(self, f.name).forward(y_pred, y) for f in fields(self)
         }
         return MetricsOutput(
-            weights=weights,
             device=device,
             loss=loss,
+            weights=weights,
             **kwargs,
         )
 
@@ -158,9 +173,9 @@ class Metrics:
     ) -> MetricsOutput:
         kwargs = {f.name: getattr(self, f.name).compute() for f in fields(self)}
         return MetricsOutput(
-            weights=weights,
             device=device,
             loss=float(np.nanmean(tuple(step_losses))),
+            weights=weights,
             **kwargs,
         )
 
