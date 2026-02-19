@@ -24,7 +24,7 @@ if __name__ == "__main__":
         weights_path=weights_path,
         cpu_only=False,
         gpu_number=0,
-        batch_size=6,
+        batch_size=1,
         log_mlflow=False,
         mlflow_experiment_name="ap_model_evaluating",
     )
