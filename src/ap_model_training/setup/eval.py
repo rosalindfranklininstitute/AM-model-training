@@ -57,7 +57,7 @@ class EvaluationObjects:
     metrics: Metrics
     post_transform: transforms.Transform | Callable = lambda x: x
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    dataloader: data.dataloader.DataLoader = field(init=False)
+    dataloader: data.DataLoader = field(init=False)
     # InitVars:
     data_workers: InitVar[int] = 4
     batch_size: InitVar[int] = 1

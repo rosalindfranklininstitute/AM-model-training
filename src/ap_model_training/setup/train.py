@@ -115,8 +115,8 @@ class TrainingObjects:
     post_transform: transforms.Transform | Callable = lambda x: x
     training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
     validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    training_dataloader: data.dataloader.DataLoader = field(init=False)
-    validation_dataloader: data.dataloader.DataLoader = field(init=False)
+    training_dataloader: data.DataLoader = field(init=False)
+    validation_dataloader: data.DataLoader = field(init=False)
     # InitVars:
     training_data_workers: InitVar[int] = 4
     validation_data_workers: InitVar[int] = 4
