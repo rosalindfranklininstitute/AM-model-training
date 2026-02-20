@@ -12,11 +12,11 @@ if typing.TYPE_CHECKING:
 
 MONAI_KEYS = CommonKeys
 
-TENSORBOARD_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "tensorboard"
-TENSORBOARD_LOG_DIR.mkdir(exist_ok=True)
+# TENSORBOARD_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "tensorboard"
+# TENSORBOARD_LOG_DIR.mkdir(exist_ok=True)
 
-MONAI_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "mlflow"
-MONAI_LOG_DIR.mkdir(exist_ok=True)
+# MONAI_LOG_DIR = Path.home() / "ap_model_training" / "logs" / "mlflow"
+# MONAI_LOG_DIR.mkdir(exist_ok=True)
 
 
 def combine_csvs(
