@@ -57,6 +57,10 @@ exclude = [
 progress = [
     "tqdm",
 ]
+test = [
+  "pytest",
+  "pytest-cov",
+]
 dev = [
     "ruff",
     "mypy",
@@ -164,13 +168,25 @@ explicit = true
 [tool.pytest.ini_options]
 addopts = "-vvvv --cov=src --cov-report term --cov-report html -p no:faulthandler -p no:napari -p no:napari-plugin-engine -p no:npe2"
 testpaths = [
-    "tests",
+  "tests",
+]
+norecursedirs = [
+  "tests/data",
+  "htmlcov",
 ]
 
 [tool.mypy]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 explicit_package_bases = true
 follow_untyped_imports = true
+
+[tool.ruff]
+include = [
+  "pyproject.toml",
+  "src/**/*.py",
+  "src/**/*.ipynb",
+  "tests/**/*.py",
+]
 
 [tool.pyright]
 reportPrivateImportUsage = "information"
