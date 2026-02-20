@@ -162,18 +162,19 @@ def run(
             )
             train_epoch_metrics_dict[epoch] = train_epoch_metrics
 
-            pd.DataFrame(
-                [
-                    {
-                        "epoch": epoch,
-                        **train_epoch_metrics_dict[epoch].to_dict(
-                            split_labels=True,
-                            labels=training_parameters.label_names,
-                        ),
-                    }
-                    for epoch in sorted(train_epoch_metrics_dict)
-                ]
-            ).to_csv(output_path / f"{training_parameters.run_id}_train_metrics.csv")
+            with (
+                output_path / f"{training_parameters.run_id}_train_metrics.json"
+            ).open("w+") as f:
+                json.dump(
+                    [
+                        {
+                            "epoch": epoch,
+                            **train_epoch_metrics_dict[epoch].to_dict(),
+                        }
+                        for epoch in sorted(train_epoch_metrics_dict)
+                    ],
+                    f,
+                )
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
                 # Unfreeze (no need if it wasn't frozen)
@@ -197,18 +198,19 @@ def run(
 
             tqdm.write(epoch_info_str)
 
-            pd.DataFrame(
-                [
-                    {
-                        "epoch": epoch,
-                        **val_epoch_metrics_dict[epoch].to_dict(
-                            split_labels=True,
-                            labels=training_parameters.label_names,
-                        ),
-                    }
-                    for epoch in sorted(val_epoch_metrics_dict)
-                ]
-            ).to_csv(output_path / f"{training_parameters.run_id}_val_metrics.csv")
+            with (output_path / f"{training_parameters.run_id}_val_metrics.json").open(
+                "w+"
+            ) as f:
+                json.dump(
+                    [
+                        {
+                            "epoch": epoch,
+                            **val_epoch_metrics_dict[epoch].to_dict(),
+                        }
+                        for epoch in sorted(val_epoch_metrics_dict)
+                    ],
+                    f,
+                )
 
             if val_epoch_metrics is not None:
                 if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
@@ -255,31 +257,34 @@ def run(
         print(
             f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
         )
-        pd.DataFrame(
-            [
-                {
-                    "epoch": epoch,
-                    **train_epoch_metrics_dict[epoch].to_dict(
-                        split_labels=True,
-                        labels=training_parameters.label_names,
-                    ),
-                }
-                for epoch in sorted(train_epoch_metrics_dict)
-            ]
-        ).to_csv(output_path / f"{training_parameters.run_id}_train_metrics.csv")
 
-        pd.DataFrame(
-            [
-                {
-                    "epoch": epoch,
-                    **val_epoch_metrics_dict[epoch].to_dict(
-                        split_labels=True,
-                        labels=training_parameters.label_names,
-                    ),
-                }
-                for epoch in sorted(val_epoch_metrics_dict)
-            ]
-        ).to_csv(output_path / f"{training_parameters.run_id}_val_metrics.csv")
+        with (output_path / f"{training_parameters.run_id}_train_metrics.json").open(
+            "w+"
+        ) as f:
+            json.dump(
+                [
+                    {
+                        "epoch": epoch,
+                        **train_epoch_metrics_dict[epoch].to_dict(),
+                    }
+                    for epoch in sorted(train_epoch_metrics_dict)
+                ],
+                f,
+            )
+
+        with (output_path / f"{training_parameters.run_id}_val_metrics.json").open(
+            "w+"
+        ) as f:
+            json.dump(
+                [
+                    {
+                        "epoch": epoch,
+                        **val_epoch_metrics_dict[epoch].to_dict(),
+                    }
+                    for epoch in sorted(val_epoch_metrics_dict)
+                ],
+                f,
+            )
 
         with (output_path / "training_parameters.json").open("w+") as f:
             json.dump(training_parameters.asdict(include_metrics=True), f)
@@ -423,11 +428,7 @@ def train(
         device=training_objects.device,
     )
 
-    epoch_metrics_dict = epoch_metrics.to_dict(
-        split_labels=True,
-        labels=training_parameters.label_names,
-        prefix="epoch",
-    )
+    epoch_metrics_dict = epoch_metrics.to_dict(prefix="epoch")
 
     get_mean_of_key_metrics(
         metrics_dict=epoch_metrics_dict,

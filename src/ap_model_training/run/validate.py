@@ -104,24 +104,20 @@ def evaluate(
             device=evaluation_objects.device,
         )
 
-    eval_metrics_dict = eval_metrics.to_dict(
-        split_labels=True,
-        labels=evaluation_parameters.label_names,
-    )
+    eval_metrics_dict = eval_metrics.to_dict()
 
     get_mean_of_key_metrics(
         metrics_dict=eval_metrics_dict,
         key_metrics=evaluation_parameters.key_metrics,
     )
 
-    stage = "eval"
     evaluation_parameters.update_metrics(metrics=eval_metrics_dict)
 
     metrics.reset()
 
     if log_mlflow:
         metrics_to_log = get_metrics_to_log(
-            stage,
+            "eval",
             evaluation_parameters.metrics,
             evaluation_parameters.label_names,
         )
@@ -131,11 +127,12 @@ def evaluate(
             step=0,
         )
 
-    pd.DataFrame(eval_metrics_dict).to_csv(
-        output_path / f"{evaluation_parameters.run_id}_eval_metrics.csv"
-    )
+        with (output_path / f"{evaluation_parameters.run_id}_eval_metrics.json").open(
+            "w+"
+        ) as f:
+            json.dump(eval_metrics_dict, f)
 
-    with (output_path / "training_parameters.json").open("w+") as f:
+    with (output_path / "eval_parameters.json").open("w+") as f:
         json.dump(evaluation_parameters.asdict(include_metrics=True), f)
 
     return eval_metrics
@@ -223,11 +220,7 @@ def validate(
             device=training_objects.device,
         )
 
-    epoch_metrics_dict = epoch_metrics.to_dict(
-        split_labels=True,
-        labels=training_parameters.label_names,
-        prefix="epoch",
-    )
+    epoch_metrics_dict = epoch_metrics.to_dict(prefix="epoch")
 
     get_mean_of_key_metrics(
         metrics_dict=epoch_metrics_dict,

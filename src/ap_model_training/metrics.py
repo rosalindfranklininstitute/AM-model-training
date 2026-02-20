@@ -8,7 +8,7 @@ from torchmetrics.segmentation import DiceScore, MeanIoU
 from torchmetrics.classification import MulticlassConfusionMatrix
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Collection, Sequence, Iterable
+    from collections.abc import Sequence, Iterable
 
 
 def get_metrics_from_confusion_matrix(
@@ -79,43 +79,39 @@ class MetricsOutput:
             weights_tensor = torch.Tensor(self.weights).to(device)
 
         for f in fields(self):
-            if not f.init or f.name in ("weights", "loss", "confusion_matrix"):
+            if (
+                f.name in ("device", "loss", "weights", "confusion_matrix")
+                or f.name.startswith("mean_")
+                or f.name.startswith("weighted_average_")
+            ):
                 continue
             value = getattr(self, f.name)
             if value is None:
-                continue
-            mean = torch.nanmean(value)
-            object.__setattr__(self, f"mean_{f.name}", mean.item())
-            if weights_tensor is not None:
-                weighted_mean = torch.nansum(
-                    torch.mul(value, weights_tensor)
-                ) / torch.sum(weights_tensor)
-                object.__setattr__(
-                    self, f"weighted_average_{f.name}", weighted_mean.item()
-                )
+                object.__setattr__(self, f"mean_{f.name}", None)
+                object.__setattr__(self, f"weighted_average_{f.name}", None)
+            else:
+                mean = torch.nanmean(value)
+                object.__setattr__(self, f"mean_{f.name}", mean.item())
+
+                if weights_tensor is None:
+                    object.__setattr__(self, f"weighted_average_{f.name}", None)
+                else:
+                    weighted_mean = torch.nansum(
+                        torch.mul(value, weights_tensor)
+                    ) / torch.sum(weights_tensor)
+                    object.__setattr__(
+                        self, f"weighted_average_{f.name}", weighted_mean.item()
+                    )
 
     def to_dict(
         self,
-        split_labels: bool = False,
-        labels: Collection[str] | None = None,
         prefix: str | None = None,
     ) -> dict[str, typing.Any]:
         d = asdict(self)
-        if split_labels:
-            if labels is None:
-                raise ValueError("No labels have been supplied")
-            for k in tuple(d.keys()):
-                v = d[k]
-                if isinstance(v, torch.Tensor) and len(v) > 1:
-                    v = d.pop(k).numpy(force=True).tolist()
-                    if len(v) != len(labels):
-                        raise ValueError(
-                            "An incorrect number of labels have been supplied"
-                        )
-                    for i, label in enumerate(labels):
-                        d[f"{label}_{k}"] = float(v[i])
-        if prefix is not None:
-            for k in tuple(d.keys()):
+        for k, v in tuple(d.items()):
+            if isinstance(v, torch.Tensor):
+                d[k] = v.tolist()
+            if prefix is not None:
                 d[f"{prefix}_{k}"] = d.pop(k)
         return d
 

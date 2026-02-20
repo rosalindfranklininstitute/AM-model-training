@@ -1,10 +1,10 @@
 from __future__ import annotations
 import logging
 import typing
+import json
 from pathlib import Path
 from string import ascii_lowercase
 
-import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -25,10 +25,12 @@ def __create_cmap() -> ListedColormap:
 LABEL_CMAP = __create_cmap()
 
 
-def get_indexes_upto_epoch(df: pd.DataFrame, max_epoch: int | None = None) -> list[int]:
+def get_indexes_upto_epoch(
+    metrics: list[dict[str, float]], max_epoch: int | None = None
+) -> list[int]:
     if max_epoch is None:
-        return list(range(len(df)))
-    return df.index[df["epoch"] <= max_epoch].tolist()
+        return list(range(len(metrics)))
+    return [i for i, m in enumerate(metrics) if m["epoch"] <= max_epoch]
 
 
 def plot_metrics(
@@ -47,22 +49,20 @@ def plot_metrics(
     plt.rcParams["xtick.labelsize"] = 5
     plt.rcParams["ytick.labelsize"] = 5
 
-    train_metrics = pd.read_csv(train_metrics_path)
-    val_metrics = pd.read_csv(val_metrics_path)
+    with open(train_metrics_path) as f:
+        train_metrics = json.load(f)
 
-    total_epochs = int(max(train_metrics["epoch"]))
-
-    if max_epoch is None or max_epoch > total_epochs:
-        max_epoch = total_epochs
+    with open(val_metrics_path) as f:
+        val_metrics = json.load(f)
 
     train_indexes = get_indexes_upto_epoch(train_metrics, max_epoch=max_epoch)
     val_indexes = get_indexes_upto_epoch(val_metrics, max_epoch=max_epoch)
 
-    train_epochs = train_metrics["epoch"][train_indexes].tolist()
-    val_epochs = val_metrics["epoch"][val_indexes].tolist()
+    train_epochs = [train_metrics[i]["epoch"] for i in train_indexes]
+    val_epochs = [val_metrics[i]["epoch"] for i in val_indexes]
 
-    train_loss = train_metrics["loss"][train_indexes].tolist()
-    val_loss = val_metrics["loss"][val_indexes].tolist()
+    train_loss = [train_metrics[i]["loss"] for i in train_indexes]
+    val_loss = [val_metrics[i]["loss"] for i in val_indexes]
 
     total_rows = 1 + len(metrics_to_plot)
 
@@ -131,15 +131,13 @@ def plot_metrics(
     ax_val_loss.grid(True, linestyle="--", color="lightgrey", alpha=0.5)
 
     metric_ylims = (-0.05, 1.05)
-    for i, metric_name in enumerate(metrics_to_plot, start=1):
-        ax_train = axes[i, 0]
-        for i, class_name in enumerate(CLASS_LABELS):
+    for m_idx, metric_name in enumerate(metrics_to_plot, start=1):
+        ax_train = axes[m_idx, 0]
+        for c_idx, class_name in enumerate(CLASS_LABELS):
             ax_train.plot(
                 train_epochs,
-                train_metrics[f"{class_name.lower()}_{metric_name.lower()}"][
-                    train_indexes
-                ],
-                color=LABEL_CMAP(i),
+                [train_metrics[i][metric_name.lower()][c_idx] for i in train_indexes],
+                color=LABEL_CMAP(c_idx),
                 label=class_name,
                 marker=".",
                 markersize=0.5,
@@ -150,7 +148,7 @@ def plot_metrics(
             if mean_metric_name in train_metrics:
                 ax_train.plot(
                     train_epochs,
-                    train_metrics[f"mean_{metric_name.lower()}"][train_indexes],
+                    [train_metrics[i][mean_metric_name] for i in train_indexes],
                     label="Mean",
                     color="k",
                     linestyle="--",
@@ -163,8 +161,9 @@ def plot_metrics(
             if weighted_average_metric_name in train_metrics:
                 ax_train.plot(
                     train_epochs,
-                    train_metrics[f"weighted_average_{metric_name.lower()}"][
-                        train_indexes
+                    [
+                        train_metrics[i][weighted_average_metric_name]
+                        for i in train_indexes
                     ],
                     label="Weighted Average",
                     color="k",
@@ -185,13 +184,13 @@ def plot_metrics(
         ax_train.set_title(f"Training {metric_name} per Class")
         ax_train.legend()
 
-    for i, metric_name in enumerate(metrics_to_plot, start=1):
-        ax_val = axes[i, 1]
-        for i, class_name in enumerate(CLASS_LABELS):
+    for m_idx, metric_name in enumerate(metrics_to_plot, start=1):
+        ax_val = axes[m_idx, 1]
+        for c_idx, class_name in enumerate(CLASS_LABELS):
             ax_val.plot(
                 val_epochs,
-                val_metrics[f"{class_name.lower()}_{metric_name.lower()}"][val_indexes],
-                color=LABEL_CMAP(i),
+                [val_metrics[i][metric_name.lower()][c_idx] for i in val_indexes],
+                color=LABEL_CMAP(c_idx),
                 label=class_name,
                 marker=".",
                 markersize=0.5,
@@ -202,7 +201,7 @@ def plot_metrics(
             if mean_metric_name in val_metrics:
                 ax_val.plot(
                     val_epochs,
-                    val_metrics[f"mean_{metric_name.lower()}"][val_indexes],
+                    [val_metrics[i][mean_metric_name] for i in val_indexes],
                     label="Mean",
                     color="k",
                     linestyle="--",
@@ -215,7 +214,7 @@ def plot_metrics(
             if weighted_average_metric_name in val_metrics:
                 ax_val.plot(
                     val_epochs,
-                    val_metrics[f"weighted_average_{metric_name.lower()}"][val_indexes],
+                    [val_metrics[i][weighted_average_metric_name] for i in val_indexes],
                     label="Weighted Average",
                     color="k",
                     linestyle=":",
