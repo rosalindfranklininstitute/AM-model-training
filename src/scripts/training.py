@@ -5,25 +5,24 @@ from ap_model_training.main import train
 
 if __name__ == "__main__":
     # Input file paths
-    all_files_csv = (
-        "/ceph/groups/structbio/adaptive_milling_project/2024labels_new/all_files4.csv"
-    )
-    train_csv = "/ceph/users/tpr78264/code/adaptive_milling_monai/training_data.csv"
-    validate_csv = (
-        "/ceph/users/tpr78264/code/adaptive_milling_monai/validation_data.csv"
-    )
+    train_csv = Path()
+    validate_csv = Path()
 
     output_path = Path.cwd() / "models"
     output_path.mkdir(exist_ok=True)
 
+    # Should be a single csv path or a tuple of training and validation csv paths
+    # If a single csv path is given, the validation split will be applied.
+    csv = (train_csv, validate_csv)
+
     train(
         output_path=output_path,
-        csv=(train_csv, validate_csv),
+        csv=csv,
         max_epochs=100,
         frozen_epochs=25,
         validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
-        cpu_only=True,
-        gpu_number=0,
+        cpu_only=False,
+        gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
         training_batch_size=6,
         validation_batch_size=1,
         log_mlflow=False,

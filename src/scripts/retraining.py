@@ -27,7 +27,7 @@ if __name__ == "__main__":
         frozen_epochs=5,
         validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
         cpu_only=False,
-        gpu_number=0,
+        gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
         training_batch_size=6,
         validation_batch_size=1,
         log_mlflow=False,

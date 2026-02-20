@@ -23,7 +23,7 @@ if __name__ == "__main__":
         csv=csv,
         weights_path=weights_path,
         cpu_only=False,
-        gpu_number=0,
+        gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
         batch_size=1,
         log_mlflow=False,
         mlflow_experiment_name="ap_model_evaluating",
