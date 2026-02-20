@@ -124,6 +124,7 @@ def evaluate(
     mlflow_experiment_name: str = "ap_model_evaluating",
 ) -> None:
     if log_mlflow:
+        # from ap_model_training.utils import MONAI_LOG_DIR
         # Setup MLFlow
         mlflow.pytorch.autolog()
         port = 54598
@@ -135,11 +136,11 @@ def evaluate(
             f"Run the following command to start:\n$mlflow ui --port {port}\nThen navigate to:\nhttp://127.0.0.1:{port}"
         )
 
-        # Setup logging
-        _file_handler = logging.FileHandler(MONAI_LOG_DIR / "training.log")
-        _file_handler.setLevel(logging.INFO)
-        _file_handler.setFormatter(_logging_formatter)
-        _logger.addHandler(_file_handler)
+        # # Setup logging
+        # _file_handler = logging.FileHandler(MONAI_LOG_DIR / "training.log")
+        # _file_handler.setLevel(logging.INFO)
+        # _file_handler.setFormatter(_logging_formatter)
+        # _logger.addHandler(_file_handler)
 
     try:
         output_path = Path(output_path)
