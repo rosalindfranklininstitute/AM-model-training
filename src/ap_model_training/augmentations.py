@@ -17,6 +17,8 @@ from monai.transforms.io.dictionary import LoadImaged
 from monai.utils.type_conversion import convert_to_tensor
 from monai.data.meta_obj import get_track_meta
 
+import itk
+
 from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
@@ -25,6 +27,8 @@ if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
 
     KeysCollection = typing.Union[Collection[Hashable], Hashable]
+
+itk.ProcessObject.SetGlobalWarningDisplay(False)
 
 __all__ = [
     "get_transform_list",
@@ -42,22 +46,18 @@ def get_transform_list(
     loading = [
         LoadImaged(
             [MONAI_KEYS.IMAGE],
-            reader=data.image_reader.PILReader,
-            # reader=OpenCVReader,
-            # rescale_input=True,
+            reader=data.image_reader.ITKReader,
             image_only=True,
             ensure_channel_first=True,
-            reverse_indexing=False,
+            reverse_indexing=True,
             dtype=np.float32,
         ),
         LoadImaged(
             [MONAI_KEYS.LABEL],
-            reader=data.image_reader.PILReader,
-            # reader=OpenCVReader,
-            # rescale_input=False,
+            reader=data.image_reader.ITKReader,
             image_only=True,
             ensure_channel_first=True,
-            reverse_indexing=False,
+            reverse_indexing=True,
             dtype=np.long,
         ),
     ]
