@@ -10,7 +10,7 @@ if typing.TYPE_CHECKING:
 
 if __name__ == "__main__":
     weights_path = Path()  # The path to the existing model weights
-    output_path = Path()  # The path where models will be saved
+    output_path = Path()  # The path where outputs will be saved
     csv_path = output_path / "combined.csv"  # Make sure you don't overwrite this
 
     # Put list of paths here
