@@ -12,6 +12,9 @@ from ap_model_training import run
 if typing.TYPE_CHECKING:
     from os import PathLike
 
+# May solve potential FD leak
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 _logger = logging.getLogger(__package__)
 _logger.propagate = False
 _logger.setLevel(logging.DEBUG)
