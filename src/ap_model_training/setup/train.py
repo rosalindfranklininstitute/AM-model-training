@@ -51,6 +51,7 @@ class TrainingParameters:
     seed: int = 42
 
     def __post_init__(self):
+        self.output_path = str(self.output_path)  # Ensure JSON serializable
         self.current_metrics = {"train": {}, "val": {}}
         self.best_metrics = {"train": {}, "val": {}}
 
