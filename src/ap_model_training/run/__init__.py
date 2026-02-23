@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import typing
+from math import ceil
 from datetime import datetime
 from pathlib import Path
 from os import PathLike
@@ -143,7 +144,7 @@ def setup_training(
         ],
         max_epochs=epochs,
         train_patience=20,
-        val_patience=10,
+        val_patience=ceil(20 / validation_interval),
         total_training_data=len(training_data),
         total_validation_data=len(validation_data),
         foreground_labels=foreground_labels,
