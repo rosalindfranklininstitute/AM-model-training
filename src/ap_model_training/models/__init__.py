@@ -23,7 +23,9 @@ def retrain_wrapper(
         model = model_creation_function(**kwargs)
 
         if weights_file is not None:
-            state = torch.load(weights_file)
+            state = torch.load(
+                weights_file, map_location=torch.device("cpu"), weights_only=True
+            )
             model.load_state_dict(state)
 
         return model
