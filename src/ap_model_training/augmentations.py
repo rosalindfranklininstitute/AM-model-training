@@ -108,7 +108,7 @@ class NormaliseTransform(transforms.transform.Transform):
         tensor = convert_to_tensor(
             data=data, dtype=torch.float32, track_meta=get_track_meta()
         )
-        mean = tensor.mean()  # Treat each image in batch separately
+        mean = tensor.mean()
         std = tensor.std(correction=1)
         tensor -= mean
         tensor /= 3 * std
