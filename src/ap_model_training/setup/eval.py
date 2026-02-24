@@ -35,6 +35,10 @@ class EvaluationParameters:
     include_background: bool = False
     seed: int = 42
 
+    def __post_init__(self):
+        self.output_path = str(self.output_path)  # Ensure JSON serializable
+        self.weights_file = str(self.weights_file)
+
     def update_metrics(
         self,
         metrics: Mapping[str, float],
