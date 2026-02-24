@@ -84,7 +84,7 @@ def train(
             include_background=True,
             frozen_epochs=frozen_epochs,
             model_kwargs={
-                "pretrained": False,
+                "pretrained": True,
                 "weights_file": weights_path,
             },
             loss_kwargs={
