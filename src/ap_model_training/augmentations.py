@@ -17,8 +17,6 @@ from monai.transforms.io.dictionary import LoadImaged
 from monai.utils.type_conversion import convert_to_tensor
 from monai.data.meta_obj import get_track_meta
 
-import itk
-
 from ap_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
@@ -27,8 +25,6 @@ if typing.TYPE_CHECKING:
     from numpy.typing import NDArray
 
     KeysCollection = typing.Union[Collection[Hashable], Hashable]
-
-itk.ProcessObject.SetGlobalWarningDisplay(False)
 
 __all__ = [
     "get_transform_list",
@@ -46,18 +42,18 @@ def get_transform_list(
     loading = [
         LoadImaged(
             [MONAI_KEYS.IMAGE],
-            reader=data.image_reader.ITKReader,
+            reader=data.image_reader.PILReader,
             image_only=True,
             ensure_channel_first=True,
-            reverse_indexing=True,
+            reverse_indexing=False,
             dtype=np.float32,
         ),
         LoadImaged(
             [MONAI_KEYS.LABEL],
-            reader=data.image_reader.ITKReader,
+            reader=data.image_reader.PILReader,
             image_only=True,
             ensure_channel_first=True,
-            reverse_indexing=True,
+            reverse_indexing=False,
             dtype=np.long,
         ),
     ]
@@ -112,7 +108,7 @@ class NormaliseTransform(transforms.transform.Transform):
         tensor = convert_to_tensor(
             data=data, dtype=torch.float32, track_meta=get_track_meta()
         )
-        mean = tensor.mean()
+        mean = tensor.mean()  # Treat each image in batch separately
         std = tensor.std(correction=1)
         tensor -= mean
         tensor /= 3 * std
