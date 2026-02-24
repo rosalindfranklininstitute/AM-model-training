@@ -181,12 +181,10 @@ class CustomDiceCELoss(torch.nn.Module):
             with torch.no_grad():
                 target = target.view(target.shape[0], *target.shape[2:])
 
+        weighted_ce_loss = self._ce_loss(input, target)
         dice_loss_per_class = self._dice_loss(input, target)
         weighted_dice_loss = (dice_loss_per_class * self.weight).mean()
-        return (
-            self.alpha * self._ce_loss(input, target)
-            + (1 - self.alpha) * weighted_dice_loss
-        )
+        return self.alpha * weighted_ce_loss + (1 - self.alpha) * weighted_dice_loss
 
 
 def compound_loss(weights: Tensor, alpha: float = 0.5, **kwargs) -> CustomDiceCELoss:
