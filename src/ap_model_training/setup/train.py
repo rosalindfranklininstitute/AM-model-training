@@ -78,7 +78,7 @@ class TrainingParameters:
 
         _logger.info(
             "Current epoch: %i, stage: %s\n%s\nBest %s %s: %.4f at epoch %i",
-            epoch + 1,
+            epoch,
             stage,
             "\n".join(
                 (

@@ -181,14 +181,14 @@ def validate(
     with torch.no_grad():
         for step, batch_data in tqdm(
             enumerate(training_objects.validation_dataloader, 1),
-            desc=f"Epoch {epoch + 1} validation",
+            desc=f"Epoch {epoch} validation",
             total=epoch_len,
             unit="step",
             leave=False,
         ):
             with torch.device(training_objects.device):
                 step_loss = _validate_step(
-                    step=epoch_len * epoch + step,
+                    step=epoch_len * (epoch - 1) + step,
                     images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
                     labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
                     metrics=metrics,
@@ -214,7 +214,7 @@ def validate(
 
     stage = "val"
     best_epoch = training_parameters.update_metrics(
-        epoch=epoch + 1, metrics=epoch_metrics_dict, stage=stage
+        epoch=epoch, metrics=epoch_metrics_dict, stage=stage
     )
 
     metrics.reset()
@@ -228,7 +228,7 @@ def validate(
 
         mlflow.log_metrics(
             metrics_to_log,
-            step=epoch + 1,
+            step=epoch,
         )
 
     return epoch_metrics, best_epoch

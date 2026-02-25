@@ -87,7 +87,7 @@ def submit_validation_images_to_mflow(
                 images,
                 labels,
                 outputs,
-                step=epoch + 1,
+                step=epoch,
                 num_classes=training_parameters.num_classes,
                 timestamp=int(time.time()),
                 separate_background=training_parameters.include_background,

@@ -144,20 +144,18 @@ def run(
         val_epoch_metrics_dict: dict[int, MetricsOutput] = {}
         epoch: int = 1
         for epoch in tqdm(
-            range(training_parameters.max_epochs),
+            range(1, training_parameters.max_epochs + 1),
             desc="Training progress",
             unit="epoch",
             total=training_parameters.max_epochs,
             initial=1,
         ):
             epoch_model_path = (
-                output_path / f"{training_parameters.run_id}_epoch{epoch + 1:03}.pth"
+                output_path / f"{training_parameters.run_id}_epoch{epoch:03}.pth"
             )
 
             train_epoch_metrics = None
             val_epoch_metrics = None
-            # print("-" * 10)
-            # print(f"epoch {epoch + 1}/{training_parameters.max_epochs}")
             train_epoch_metrics, best_train_epoch = train(
                 training_objects,
                 training_parameters,
@@ -182,13 +180,13 @@ def run(
                     indent=4,
                 )
 
-            if epoch > 0 and epoch == training_parameters.frozen_epochs:
+            if epoch > 0 and epoch == (training_parameters.frozen_epochs + 1):
                 # Unfreeze (no need if it wasn't frozen)
                 for param in training_objects.model.encoder.parameters():  # type: ignore
                     param.requires_grad = True
 
-            epoch_info_str = f"Epoch {epoch + 1}/{training_parameters.max_epochs}, Train Loss: {train_epoch_metrics.loss:.4f}"
-            if (epoch + 1) % training_parameters.val_interval == 0 or best_train_epoch:
+            epoch_info_str = f"Epoch {epoch}/{training_parameters.max_epochs}, Train Loss: {train_epoch_metrics.loss:.4f}"
+            if epoch % training_parameters.val_interval == 0 or best_train_epoch:
                 val_epoch_metrics, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
@@ -210,7 +208,7 @@ def run(
                 if model_signature is not None:
                     mlflow.pytorch.log_model(
                         training_objects.model,
-                        name=get_model_artifact_path(epoch + 1),
+                        name=get_model_artifact_path(epoch),
                         signature=model_signature,
                         pip_requirements=PIP_REQUIREMENTS,
                     )
@@ -239,11 +237,9 @@ def run(
                         training_parameters.best_metric
                     ]
                 ):
-                    tqdm.write(
-                        f"Stopped early after epoch {epoch + 1} due to val stopper"
-                    )
+                    tqdm.write(f"Stopped early after epoch {epoch} due to val stopper")
                     _logger.info(
-                        "Stopped early after epoch %i due to val stopper", epoch + 1
+                        "Stopped early after epoch %i due to val stopper", epoch
                     )
                     break
 
@@ -266,12 +262,10 @@ def run(
                     )
 
                     val_epoch_metrics_dict[epoch] = val_epoch_metrics
-                tqdm.write(
-                    f"Stopped early after epoch {epoch + 1} due to train stopper"
-                )
+                tqdm.write(f"Stopped early after epoch {epoch} due to train stopper")
                 _logger.info(
                     "Stopped early after epoch %i due to train stopper",
-                    epoch + 1,
+                    epoch,
                 )
                 break
 
@@ -370,8 +364,6 @@ def _train_step(
         if not skip_lr_scheduler:
             training_objects.lr_scheduler.step()
 
-    # Calculate metrics and log progress for this step
-    # print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
     loss_value = loss.item()
     if np.isnan(loss_value):
         _logger.warning("Loss for training step %i is NaN", step)
@@ -424,14 +416,14 @@ def train(
     loss_list: list[float] = []
     for step, batch_data in tqdm(
         enumerate(training_objects.training_dataloader, 1),
-        desc=f"Epoch {epoch + 1} training",
+        desc=f"Epoch {epoch} training",
         total=epoch_len,
         unit="step",
         leave=False,
     ):
         with torch.device(training_objects.device):
             step_loss = _train_step(
-                step=epoch_len * epoch + step,
+                step=epoch_len * (epoch - 1) + step,
                 images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
                 labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
                 metrics=metrics,
@@ -458,7 +450,7 @@ def train(
     )
 
     best_epoch = training_parameters.update_metrics(
-        epoch=epoch + 1, metrics=epoch_metrics_dict, stage="train"
+        epoch=epoch, metrics=epoch_metrics_dict, stage="train"
     )
 
     metrics.reset()
@@ -472,6 +464,6 @@ def train(
 
         mlflow.log_metrics(
             metrics_to_log,
-            step=epoch + 1,
+            step=epoch,
         )
     return epoch_metrics, best_epoch
