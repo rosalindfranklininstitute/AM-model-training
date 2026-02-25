@@ -78,7 +78,7 @@ class MetricsOutput:
         if weights is None or device is None:
             weights_tensor = None
         else:
-            weights_tensor = torch.Tensor(weights, device=device)
+            weights_tensor = torch.tensor(weights, device=device)
 
         for f in fields(self):
             if (
