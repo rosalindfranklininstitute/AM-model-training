@@ -135,12 +135,12 @@ def setup_training(
         learning_rate=learning_rate,
         best_metric="mean_of_key_metrics",
         key_train_metrics=[
-            "epoch_weighted_average_iou",
-            "epoch_weighted_average_dice",
+            "weighted_average_iou",
+            "weighted_average_dice",
         ],
         key_val_metrics=[
-            "epoch_weighted_average_iou",
-            "epoch_weighted_average_dice",
+            "weighted_average_iou",
+            "weighted_average_dice",
         ],
         max_epochs=epochs,
         train_patience=20,

@@ -203,7 +203,7 @@ def validate(
             device=training_objects.device,
         )
 
-    epoch_metrics_dict = epoch_metrics.to_dict(prefix="epoch")
+    epoch_metrics_dict = epoch_metrics.to_dict()
 
     get_mean_of_key_metrics(
         metrics_dict=epoch_metrics_dict,
