@@ -191,8 +191,6 @@ def run(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
-                    model_path=epoch_model_path,
-                    model_signature=model_signature,
                     log_mlflow=log_mlflow,
                 )
 
@@ -256,8 +254,6 @@ def run(
                         training_objects,
                         training_parameters,
                         epoch=epoch,
-                        model_path=epoch_model_path,
-                        model_signature=model_signature,
                         log_mlflow=log_mlflow,
                     )
 

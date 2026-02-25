@@ -162,8 +162,6 @@ def validate(
     training_objects: TrainingObjects,
     training_parameters: TrainingParameters,
     epoch: int,
-    model_path: str | PathLike[str],
-    model_signature: mlflow.models.ModelSignature | None = None,
     log_mlflow: bool = False,
 ) -> tuple[MetricsOutput, bool]:
     epoch_len = int(
