@@ -42,6 +42,8 @@ def train(
     gpu_number: int = 0,
     training_batch_size: int = 6,
     validation_batch_size: int = 1,
+    initial_learning_rate: float = 1e-5,
+    max_learning_rate: float = 1e-3,
     save_all_models: bool = False,
     seed: int = 42,
     log_mlflow: bool = False,
@@ -80,7 +82,7 @@ def train(
             pad_images=False,
             rgb_images=True,
             loss_name="compound_loss",
-            learning_rate=1e-5,
+            learning_rate=initial_learning_rate,
             epochs=max_epochs,
             include_background=True,
             frozen_epochs=frozen_epochs,
@@ -96,7 +98,7 @@ def train(
             gpu_number=gpu_number,
             lr_scheduler_name="onecyclelr",
             lr_scheduler_kwargs={
-                "max_lr": 1e-3,  # onecyclelr
+                "max_lr": max_learning_rate,  # onecyclelr
             },
             training_batch_size=training_batch_size,
             validation_batch_size=validation_batch_size,

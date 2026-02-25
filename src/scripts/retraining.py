@@ -31,6 +31,8 @@ if __name__ == "__main__":
         training_batch_size=6,
         validation_batch_size=1,
         save_all_models=True,
+        initial_learning_rate=2e-6,
+        max_learning_rate=3e-4,
         log_mlflow=False,
         mlflow_experiment_name="ap_model_retraining",
     )
