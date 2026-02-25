@@ -239,6 +239,7 @@ def run_training(
     validation_batch_size: int = 1,
     num_training_workers: int | None = None,
     num_validation_workers: int | None = None,
+    save_all_models: bool = False,
     log_mlflow: bool = False,
     submit_training_images: bool = False,
     seed: int = 42,
@@ -304,6 +305,7 @@ def run_training(
         training_parameters=training_parameters,
         submit_training_images=submit_training_images,
         log_mlflow=log_mlflow,
+        save_all=save_all_models,
     )
 
 

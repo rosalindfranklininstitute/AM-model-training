@@ -203,7 +203,7 @@ def run(
             else:
                 best_val_epoch = False
 
-            if best_train_epoch or best_val_epoch:
+            if save_all or best_train_epoch or best_val_epoch:
                 torch.save(training_objects.model.state_dict(), epoch_model_path)
                 tqdm.write(f"Model saved: {str(epoch_model_path)}")
                 if model_signature is not None:

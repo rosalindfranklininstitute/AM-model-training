@@ -30,6 +30,7 @@ if __name__ == "__main__":
         gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
         training_batch_size=6,
         validation_batch_size=1,
+        save_all_models=True,
         log_mlflow=False,
         mlflow_experiment_name="ap_model_retraining",
     )
