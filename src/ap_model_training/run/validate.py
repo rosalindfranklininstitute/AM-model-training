@@ -3,9 +3,7 @@ import logging
 import json
 import typing
 from pathlib import Path
-from importlib.metadata import distributions
 
-import pandas as pd
 import numpy as np
 
 import torch
@@ -31,7 +29,6 @@ from ap_model_training.metrics import MetricsOutput, Metrics
 from ap_model_training.run.utils import (
     get_mean_of_key_metrics,
     get_metrics_to_log,
-    get_model_artifact_path,
 )
 
 if typing.TYPE_CHECKING:
@@ -46,19 +43,7 @@ if typing.TYPE_CHECKING:
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-_logger = logging.getLogger("adaptive_milling_training")
-
-
-def get_requirements() -> list[str]:
-    requirements: list[str] = []
-    for dist in distributions():
-        name = dist.metadata["Name"]
-        version = dist.version
-        requirements.append(f"{name}=={version}")
-    return requirements
-
-
-PIP_REQUIREMENTS = get_requirements()
+_logger = logging.getLogger(__name__)
 
 
 def evaluate(
@@ -233,18 +218,6 @@ def validate(
     )
 
     metrics.reset()
-
-    if best_epoch:
-        torch.save(training_objects.model.state_dict(), model_path)
-        tqdm.write(f"Model saved: {str(model_path)}")
-        if model_signature is not None:
-            mlflow.pytorch.log_model(
-                training_objects.model,
-                name=get_model_artifact_path(epoch + 1),
-                signature=model_signature,
-                pip_requirements=PIP_REQUIREMENTS,
-            )
-        _logger.info(f"Saved new best metric model: {model_path}")
 
     if log_mlflow:
         metrics_to_log = get_metrics_to_log(

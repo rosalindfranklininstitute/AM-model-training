@@ -33,6 +33,8 @@ from ap_model_training.run.utils import (
     clear_memory,
     get_mean_of_key_metrics,
     get_metrics_to_log,
+    get_model_artifact_path,
+    get_requirements,
 )
 from ap_model_training.run.mlflow import (
     log_training_objects_to_mlflow,
@@ -47,7 +49,9 @@ if typing.TYPE_CHECKING:
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-_logger = logging.getLogger("adaptive_milling_training")
+_logger = logging.getLogger(__name__)
+
+PIP_REQUIREMENTS = get_requirements()
 
 
 class EarlyStopper:
@@ -93,6 +97,7 @@ def run(
     training_parameters: TrainingParameters,
     submit_training_images: bool = False,
     log_mlflow: bool = False,
+    save_all: bool = False,
 ) -> None:
     train_stopper = EarlyStopper(patience=training_parameters.train_patience)
     val_stopper = EarlyStopper(patience=training_parameters.val_patience)
@@ -183,7 +188,7 @@ def run(
 
             epoch_info_str = f"Epoch {epoch + 1}/{training_parameters.max_epochs}, Train Loss: {train_epoch_metrics.loss:.4f}"
             if (epoch + 1) % training_parameters.val_interval == 0 or best_train_epoch:
-                val_epoch_metrics, _ = validate(
+                val_epoch_metrics, best_val_epoch = validate(
                     training_objects,
                     training_parameters,
                     epoch=epoch,
@@ -195,6 +200,20 @@ def run(
                 val_epoch_metrics_dict[epoch] = val_epoch_metrics
 
                 epoch_info_str += f", Val Loss: {val_epoch_metrics.loss:.4f}"
+            else:
+                best_val_epoch = False
+
+            if best_train_epoch or best_val_epoch:
+                torch.save(training_objects.model.state_dict(), epoch_model_path)
+                tqdm.write(f"Model saved: {str(epoch_model_path)}")
+                if model_signature is not None:
+                    mlflow.pytorch.log_model(
+                        training_objects.model,
+                        name=get_model_artifact_path(epoch + 1),
+                        signature=model_signature,
+                        pip_requirements=PIP_REQUIREMENTS,
+                    )
+                _logger.info(f"Saved new best metric model: {epoch_model_path}")
 
             tqdm.write(epoch_info_str)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import gc
 import typing
+from importlib.metadata import distributions
 
 import numpy as np
 import torch
@@ -53,3 +54,12 @@ def get_metrics_to_log(
         else:
             metrics_to_log[metric_key] = values
     return metrics_to_log
+
+
+def get_requirements() -> list[str]:
+    requirements: list[str] = []
+    for dist in distributions():
+        name = dist.metadata["Name"]
+        version = dist.version
+        requirements.append(f"{name}=={version}")
+    return requirements
