@@ -60,7 +60,7 @@ def eval_for_multiple_epochs(
         / f"smp_fpn_{weights_directory.stem}_{csv.stem}_combined_metrics.json"
     )
     with all_metrics_path.open("w+") as f:
-        json.dump(all_evaluation_metrics, f)
+        json.dump(all_evaluation_metrics, f, indent=4)
     return all_metrics_path
 
 

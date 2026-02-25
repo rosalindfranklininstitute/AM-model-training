@@ -179,6 +179,7 @@ def run(
                         for epoch in sorted(train_epoch_metrics_dict)
                     ],
                     f,
+                    indent=4,
                 )
 
             if epoch > 0 and epoch == training_parameters.frozen_epochs:
@@ -229,6 +230,7 @@ def run(
                         for epoch in sorted(val_epoch_metrics_dict)
                     ],
                     f,
+                    indent=4,
                 )
 
             if val_epoch_metrics is not None:
@@ -289,6 +291,7 @@ def run(
                     for epoch in sorted(train_epoch_metrics_dict)
                 ],
                 f,
+                indent=4,
             )
 
         with (output_path / f"{training_parameters.run_id}_val_metrics.json").open(
@@ -306,7 +309,7 @@ def run(
             )
 
         with (output_path / "training_parameters.json").open("w+") as f:
-            json.dump(training_parameters.asdict(include_metrics=True), f)
+            json.dump(training_parameters.asdict(include_metrics=True), f, indent=4)
 
         clear_memory()
 

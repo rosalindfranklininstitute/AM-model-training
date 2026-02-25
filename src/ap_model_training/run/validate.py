@@ -118,7 +118,7 @@ def evaluate(
         json.dump(eval_metrics_dict, f)
 
     with (output_path / "eval_parameters.json").open("w+") as f:
-        json.dump(evaluation_parameters.asdict(include_metrics=True), f)
+        json.dump(evaluation_parameters.asdict(include_metrics=True), f, indent=4)
 
     return eval_metrics
 
