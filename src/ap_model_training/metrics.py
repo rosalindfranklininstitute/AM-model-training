@@ -39,7 +39,7 @@ def get_metrics_from_confusion_matrix(
 class MetricsOutput:
     device: InitVar[torch.device | None]
     loss: float
-    weights: Sequence[float] | None | None = None
+    weights: InitVar[Sequence[float] | None] = None
 
     confusion_matrix: torch.Tensor | None = None
 
@@ -68,15 +68,17 @@ class MetricsOutput:
     mean_recall: float = field(init=False)
     weighted_average_recall: float | None = field(init=False, default=None)
 
-    def __post_init__(self, device: torch.device | None) -> None:
+    def __post_init__(
+        self, device: torch.device | None, weights: Sequence[float] | None
+    ) -> None:
         self.f1, self.accuracy, self.precision, self.recall = (
             get_metrics_from_confusion_matrix(confusion_matrix=self.confusion_matrix)
         )
 
-        if self.weights is None or device is None:
+        if weights is None or device is None:
             weights_tensor = None
         else:
-            weights_tensor = torch.Tensor(self.weights).to(device)
+            weights_tensor = torch.Tensor(weights, device=device)
 
         for f in fields(self):
             if (
