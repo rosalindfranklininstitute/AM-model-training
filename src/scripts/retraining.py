@@ -24,7 +24,7 @@ if __name__ == "__main__":
         csv=csv,
         weights_path=weights_path,
         max_epochs=20,
-        frozen_epochs=5,
+        frozen_epochs=0,
         validation_split=0.15,  # Ignored if csv is passed as a tuple of training and validation csvs
         cpu_only=False,
         gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
