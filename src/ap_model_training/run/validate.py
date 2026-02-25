@@ -127,10 +127,10 @@ def evaluate(
             step=0,
         )
 
-        with (output_path / f"{evaluation_parameters.run_id}_eval_metrics.json").open(
-            "w+"
-        ) as f:
-            json.dump(eval_metrics_dict, f)
+    with (output_path / f"{evaluation_parameters.run_id}_eval_metrics.json").open(
+        "w+"
+    ) as f:
+        json.dump(eval_metrics_dict, f)
 
     with (output_path / "eval_parameters.json").open("w+") as f:
         json.dump(evaluation_parameters.asdict(include_metrics=True), f)
