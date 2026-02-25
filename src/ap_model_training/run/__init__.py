@@ -370,8 +370,8 @@ def setup_evaluation(
         total_data=len(data),
         batch_size=batch_size,
         key_metrics=[
-            "epoch_weighted_average_iou",
-            "epoch_weighted_average_dice",
+            "weighted_average_iou",
+            "weighted_average_dice",
         ],
         foreground_labels=foreground_labels,
         loss_weights=loss_kwargs.get("weights", None),
