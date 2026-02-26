@@ -312,11 +312,10 @@ def run(
                 "best_val_metrics",
                 training_parameters.best_metrics["val"],
             )
-            best_val_epoch = int(training_parameters.best_metrics["val"]["epoch"])
             submit_validation_images_to_mflow(
                 training_objects=training_objects,
                 training_parameters=training_parameters,
-                epoch=best_val_epoch,
+                epoch=int(training_parameters.best_metrics["val"]["epoch"]),
             )
 
 
