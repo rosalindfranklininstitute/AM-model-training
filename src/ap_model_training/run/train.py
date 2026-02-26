@@ -296,6 +296,7 @@ def run(
                     for epoch in sorted(val_epoch_metrics_dict)
                 ],
                 f,
+                indent=4,
             )
 
         with (output_path / "training_parameters.json").open("w+") as f:

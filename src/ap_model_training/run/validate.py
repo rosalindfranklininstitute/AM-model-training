@@ -71,19 +71,8 @@ def evaluate(
             leave=False,
         ):
             with torch.device(evaluation_objects.device):
-                images = (
-                    batch_data[MONAI_KEYS.IMAGE]
-                    .detach()
-                    .copy()
-                    .to(evaluation_objects.device)
-                )
-                labels = (
-                    batch_data[MONAI_KEYS.LABEL]
-                    .detach()
-                    .copy()
-                    .to(evaluation_objects.device)
-                )
-                del batch_data
+                images = batch_data[MONAI_KEYS.IMAGE].to(evaluation_objects.device)
+                labels = batch_data[MONAI_KEYS.LABEL].to(evaluation_objects.device)
                 step_loss = _validate_step(
                     step=step,
                     images=images,
@@ -126,7 +115,7 @@ def evaluate(
     with (output_path / f"{evaluation_parameters.run_id}_eval_metrics.json").open(
         "w+"
     ) as f:
-        json.dump(eval_metrics_dict, f)
+        json.dump(eval_metrics_dict, f, indent=4)
 
     with (output_path / "eval_parameters.json").open("w+") as f:
         json.dump(evaluation_parameters.asdict(include_metrics=True), f, indent=4)
