@@ -38,6 +38,7 @@ def plot_metrics(
     val_metrics_path: str | PathLike[str],
     output_image_path: str | PathLike[str],
     marker_epoch: int | None = None,
+    frozen_epochs: int | None = None,
     max_epoch: int | None = None,
     log_loss: bool = True,
     metrics_to_plot: list[
@@ -82,6 +83,10 @@ def plot_metrics(
             horizontalalignment="left",
         )
         ax.grid(True, linestyle="--", color="lightgrey", alpha=0.5)
+
+        if frozen_epochs is not None and frozen_epochs > 0:
+            ax.axvspan(-1, frozen_epochs, alpha=0.25, zorder=0)
+
         if marker_epoch is not None:
             ax.axvline(
                 x=marker_epoch, color="gray", linestyle="--", linewidth=0.8, zorder=0
@@ -247,5 +252,7 @@ if __name__ == "__main__":
     plot_metrics(
         training_metrics_path,
         validation_metrics_path,
+        frozen_epochs=0,
+        marker_epoch=28,
         output_image_path=output_image_path,
     )
