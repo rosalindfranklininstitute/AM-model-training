@@ -4,6 +4,8 @@ import json
 import typing
 from pathlib import Path
 
+from tqdm import tqdm
+
 from ap_model_training.main import evaluate
 
 if typing.TYPE_CHECKING:
@@ -35,7 +37,13 @@ def eval_for_multiple_epochs(
         ((get_epoch_from_path(path), path) for path in weights_directory.glob("*.pth"))
     )
     all_evaluation_metrics = []
-    for epoch, weights_path in weights_paths:
+    for epoch, weights_path in tqdm(
+        weights_paths,
+        desc=f"Evaluation with {csv.name}",
+        total=len(weights_paths),
+        unit="epoch",
+        leave=True,
+    ):
         if weights_path.is_file():
             evaluate(
                 output_path=output_path,
@@ -47,10 +55,9 @@ def eval_for_multiple_epochs(
                 log_mlflow=False,
                 mlflow_experiment_name="ap_model_evaluating",
             )
-            metrics_path = (
-                output_path
-                / f"smp_fpn_{weights_path.stem}_{csv.stem}_eval_metrics.json"
-            )
+            metrics_path = tuple(
+                (output_path / f"{weights_path.stem}_{csv.stem}").glob("*_metrics.json")
+            )[0]
             if metrics_path.is_file():
                 with metrics_path.open() as f:
                     all_evaluation_metrics.append(json.load(f))
@@ -86,5 +93,5 @@ if __name__ == "__main__":
             weights_directory=weights_directory,
             cpu_only=False,
             gpu_number=0,  # Sets which GPU will be used (if cpu_only=False)
-            batch_size=1,
+            batch_size=6,
         )
