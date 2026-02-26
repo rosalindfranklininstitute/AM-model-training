@@ -71,17 +71,28 @@ def evaluate(
             leave=False,
         ):
             with torch.device(evaluation_objects.device):
+                images = (
+                    batch_data[MONAI_KEYS.IMAGE]
+                    .detach()
+                    .copy()
+                    .to(evaluation_objects.device)
+                )
+                labels = (
+                    batch_data[MONAI_KEYS.LABEL]
+                    .detach()
+                    .copy()
+                    .to(evaluation_objects.device)
+                )
+                del batch_data
                 step_loss = _validate_step(
                     step=step,
-                    images=batch_data[MONAI_KEYS.IMAGE].to(evaluation_objects.device),
-                    labels=batch_data[MONAI_KEYS.LABEL].to(evaluation_objects.device),
+                    images=images,
+                    labels=labels,
                     metrics=metrics,
                     training_objects=evaluation_objects,
                     log_mlflow=log_mlflow,
                 )
             loss_list.append(step_loss)
-
-            del batch_data
 
         eval_metrics = metrics.get_epoch_metrics(
             step_losses=loss_list,

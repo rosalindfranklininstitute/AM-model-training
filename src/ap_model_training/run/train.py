@@ -417,10 +417,17 @@ def train(
         leave=False,
     ):
         with torch.device(training_objects.device):
+            images = (
+                batch_data[MONAI_KEYS.IMAGE].detach().copy().to(training_objects.device)
+            )
+            labels = (
+                batch_data[MONAI_KEYS.LABEL].detach().copy().to(training_objects.device)
+            )
+            del batch_data
             step_loss = _train_step(
                 step=epoch_len * (epoch - 1) + step,
-                images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
-                labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+                images=images,
+                labels=labels,
                 metrics=metrics,
                 training_objects=training_objects,
                 training_parameters=training_parameters,
@@ -428,8 +435,6 @@ def train(
                 submit_images=submit_images,
             )
         loss_list.append(step_loss)
-
-        del batch_data
 
     epoch_metrics = metrics.get_epoch_metrics(
         step_losses=loss_list,
