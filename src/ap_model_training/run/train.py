@@ -418,13 +418,8 @@ def train(
         leave=False,
     ):
         with torch.device(training_objects.device):
-            images = (
-                batch_data[MONAI_KEYS.IMAGE].detach().copy().to(training_objects.device)
-            )
-            labels = (
-                batch_data[MONAI_KEYS.LABEL].detach().copy().to(training_objects.device)
-            )
-            del batch_data
+            images = batch_data[MONAI_KEYS.IMAGE].to(training_objects.device)
+            labels = batch_data[MONAI_KEYS.LABEL].to(training_objects.device)
             step_loss = _train_step(
                 step=epoch_len * (epoch - 1) + step,
                 images=images,

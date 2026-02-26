@@ -185,17 +185,17 @@ def validate(
             leave=False,
         ):
             with torch.device(training_objects.device):
+                images = batch_data[MONAI_KEYS.IMAGE].to(training_objects.device)
+                labels = batch_data[MONAI_KEYS.LABEL].to(training_objects.device)
                 step_loss = _validate_step(
                     step=epoch_len * (epoch - 1) + step,
-                    images=batch_data[MONAI_KEYS.IMAGE].to(training_objects.device),
-                    labels=batch_data[MONAI_KEYS.LABEL].to(training_objects.device),
+                    images=images,
+                    labels=labels,
                     metrics=metrics,
                     training_objects=training_objects,
                     log_mlflow=log_mlflow,
                 )
             loss_list.append(step_loss)
-
-            del batch_data
 
         epoch_metrics = metrics.get_epoch_metrics(
             step_losses=loss_list,
