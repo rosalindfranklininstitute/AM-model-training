@@ -185,3 +185,39 @@ def evaluate(
             mlflow.end_run()
         except:  # noqa: E722
             _logger.error("Failed to end MLFlow run", exc_info=True)
+
+def infer(
+    output_path: str | PathLike[str],
+    csv: str | PathLike[str],
+    weights_path: str | PathLike[str],
+    cpu_only: bool = False,
+    gpu_number: int = 0,
+    batch_size: int = 1,
+) -> None:
+    try:
+        output_path = Path(output_path)
+        output_path.mkdir(exist_ok=True)
+
+        run.run_inference(
+            output_path=output_path,
+            weights_file=weights_path,
+            model_name="smp_fpn",
+            csv=csv,
+            image_size=1536,
+            pad_images=False,
+            rgb_images=True,
+            include_background=True,
+            model_kwargs={
+                "pretrained": False,
+                "weights_file": weights_path,
+            },
+            cpu_only=cpu_only,
+            gpu_number=gpu_number,
+            batch_size=batch_size,
+        )
+    finally:  # noqa: E722
+        try:
+            with torch.no_grad():
+                torch.cuda.empty_cache()
+        except Exception:
+            _logger.error("Failed to clear CUDA cache", exc_info=True)

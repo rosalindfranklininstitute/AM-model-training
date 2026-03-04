@@ -23,6 +23,10 @@ from ap_model_training.setup.eval import (
     setup_evaluation_objects,
 )
 from ap_model_training.setup.stage import StageObjects
+from ap_model_training.setup.inference import (
+    InferenceObjects,
+    InferenceParameters,
+    setup_inference_objects,
 )
 
 if typing.TYPE_CHECKING:
@@ -41,6 +45,9 @@ __all__ = [
     "EvaluationParameters",
     "setup_evaluation_objects",
     "StageObjects",
+    "InferenceObjects",
+    "InferenceParameters",
+    "setup_inference_objects",
 ]
 
 

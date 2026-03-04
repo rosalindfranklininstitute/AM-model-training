@@ -13,7 +13,7 @@ from monai.utils import set_determinism
 
 from ap_model_training import setup
 from ap_model_training import files
-from ap_model_training.run import train, validate
+from ap_model_training.run import train, validate, infer
 from ap_model_training import models
 from ap_model_training import losses
 
@@ -533,3 +533,137 @@ def submit_validation_for_mlflow_run(
         train.submit_validation_images_to_mflow(
             training_objects, training_parameters, epoch=epoch
         )
+
+
+def setup_inference(
+    output_path: str | PathLike[str],
+    weights_file: str | PathLike[str],
+    run_id: str,
+    model_name: str,
+    csv_path: str | PathLike[str],
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
+    image_size: int = 1536,
+    pad: bool = False,
+    rgb: bool = True,
+    cpu_only: bool = False,
+    model_kwargs: dict[str, typing.Any] | None = None,
+    include_background: bool = True,
+    gpu_number: int | None = None,
+    batch_size: int = 1,
+    num_workers: int | None = None,
+) -> tuple[setup.InferenceObjects, setup.InferenceParameters]:
+    if model_kwargs is None:
+        model_kwargs = {}
+    model_kwargs["weights_file"] = weights_file
+
+    if dataset_kwargs is None:
+        dataset_kwargs = {}
+
+    data = setup.create_dataset(
+        _load_csv(csv_path),
+        image_size=image_size,
+        augmentations=False,
+        dataset_type=dataset_type,
+        pad=pad,
+        rgb=rgb,
+        **dataset_kwargs,
+    )
+    _logger.info("Dataset loaded from %s", csv_path)
+
+    num_classes = 5
+
+    device = setup.get_device(cpu_only, gpu=gpu_number)
+
+    label_names = ("padding", "background", "gis", "lamella", "crack", "vacuum")
+
+    inference_parameters = setup.InferenceParameters(
+        output_path=output_path,
+        run_id=run_id,
+        num_classes=num_classes,
+        num_channels=3 if rgb else 1,
+        label_names=label_names[2 - int(pad) - int(include_background) :],
+        input_image_shape=image_size,
+        weights_file=weights_file,
+        total_data=len(data),
+        batch_size=batch_size,
+        include_background=include_background,
+    )
+
+    model_kwargs.update(
+        {
+            "label_count": inference_parameters.num_classes,
+            "input_image_size": inference_parameters.input_image_shape,
+        }
+    )
+
+    model_creator = models.model_creation_functions[model_name]
+
+    _logger.info("Starting inference...")
+
+    model = model_creator(**model_kwargs)
+    inference_objects = setup.setup_inference_objects(
+        device=device,
+        data=data,
+        model=model,
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+    return inference_objects, inference_parameters
+
+
+def run_inference(
+    output_path: str | PathLike[str],
+    weights_file: str | PathLike[str],
+    model_name: str,
+    csv: str | PathLike[str],
+    dataset_type: type[Dataset] = Dataset,
+    dataset_kwargs: dict[str, typing.Any] | None = None,
+    image_size: int = 1536,
+    pad_images: bool = False,
+    rgb_images: bool = True,
+    cpu_only: bool = False,
+    model_kwargs: dict[str, typing.Any] | None = None,
+    include_background: bool = True,
+    gpu_number: int | None = None,
+    batch_size: int = 1,
+    num_workers: int | None = None,
+) -> None:
+    weights_file = Path(weights_file)
+    output_path = Path(output_path)
+    csv_path = Path(csv)
+    input_name = csv_path.stem
+
+    subdirectory = output_path / f"{weights_file.stem}_{input_name}"
+    try:
+        subdirectory.mkdir()
+    except OSError:
+        _logger.error(
+            "Failed to create subdirectory '%s'",
+            str(subdirectory),
+            exc_info=True,
+        )
+        raise
+
+    inference_objects, inference_parameters = setup_inference(
+        output_path=subdirectory,
+        weights_file=weights_file,
+        run_id=f"{model_name}_{weights_file.stem}_{input_name}",
+        model_name=model_name,
+        csv_path=csv_path,
+        dataset_type=dataset_type,
+        dataset_kwargs=dataset_kwargs,
+        image_size=image_size,
+        pad=pad_images,
+        rgb=rgb_images,
+        cpu_only=cpu_only,
+        model_kwargs=model_kwargs,
+        include_background=include_background,
+        gpu_number=gpu_number,
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+    infer.run(
+        inference_objects=inference_objects,
+        inference_parameters=inference_parameters,
+    )
