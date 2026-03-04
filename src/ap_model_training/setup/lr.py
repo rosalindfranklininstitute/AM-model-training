@@ -17,7 +17,6 @@ def find_learning_rate(
     lower_learning_rate: float = 1e-7,
     upper_learning_rate: float = 1e-2,
     iterations: int = 20,
-    amp: bool = True,
 ) -> None:
     lr_finder = optimizers.LearningRateFinder(
         model=training_objects.model,
@@ -26,8 +25,8 @@ def find_learning_rate(
         device=training_objects.device,
     )
     lr_finder.range_test(
-        training_objects.training_dataloader,
-        training_objects.validation_dataloader,
+        training_objects.training.dataloader,
+        training_objects.validation.dataloader,
         start_lr=lower_learning_rate,
         end_lr=upper_learning_rate,
         num_iter=iterations,

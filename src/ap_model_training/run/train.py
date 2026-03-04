@@ -104,10 +104,10 @@ def run(
 
     output_path = Path(training_parameters.output_path)
 
-    pd.DataFrame(training_objects.training_data.data).to_csv(
+    pd.DataFrame(training_objects.training.data.data).to_csv(
         output_path / f"{training_parameters.run_id}_train_data.csv", index=False
     )
-    pd.DataFrame(training_objects.validation_data.data).to_csv(
+    pd.DataFrame(training_objects.validation.data.data).to_csv(
         output_path / f"{training_parameters.run_id}_val_data.csv", index=False
     )
 
@@ -118,7 +118,8 @@ def run(
                 size=(
                     1,
                     training_parameters.num_channels,
-                    *training_parameters.input_image_shape,
+                    training_parameters.input_image_shape,
+                    training_parameters.input_image_shape,
                 )
             ).astype(np.float32)
             model_signature = mlflow.models.infer_signature(
@@ -333,7 +334,7 @@ def _train_step(
     images.requires_grad_()
     training_objects.optimizer.zero_grad()
     with autocast(training_objects.device.type):
-        outputs = training_objects.training_inferer(images, training_objects.model)
+        outputs = training_objects.training.inferer(images, training_objects.model)
         loss = training_objects.loss_function(outputs, labels)
 
     skip_lr_scheduler = False
@@ -367,7 +368,7 @@ def _train_step(
 
     outputs = torch.stack(
         [
-            training_objects.post_transform(_)
+            training_objects.training.post_transform(_)
             for _ in decollate_batch(outputs)  # type: ignore
         ]
     )
@@ -400,7 +401,7 @@ def train(
     log_mlflow: bool = False,
     submit_images: bool = False,
 ) -> tuple[MetricsOutput, bool]:
-    metrics = training_objects.train_metrics
+    metrics = training_objects.training.metrics
     metrics.reset()
     training_objects.model.train()
     epoch_len = int(
@@ -411,7 +412,7 @@ def train(
     )
     loss_list: list[float] = []
     for step, batch_data in tqdm(
-        enumerate(training_objects.training_dataloader, 1),
+        enumerate(training_objects.training.dataloader, 1),
         desc=f"Epoch {epoch} training",
         total=epoch_len,
         unit="step",

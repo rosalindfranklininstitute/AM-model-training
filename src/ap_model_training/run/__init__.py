@@ -131,7 +131,7 @@ def setup_training(
         num_classes=num_classes,
         num_channels=3 if rgb else 1,
         label_names=label_names[2 - int(pad) - int(include_background) :],
-        input_image_shape=(image_size, image_size),
+        input_image_shape=image_size,
         learning_rate=learning_rate,
         best_metric="mean_of_key_metrics",
         key_train_metrics=[
@@ -328,11 +328,7 @@ def setup_evaluation(
     gpu_number: int | None = None,
     batch_size: int = 1,
     num_workers: int | None = None,
-    seed: int = 42,
 ) -> tuple[setup.EvaluationObjects, setup.EvaluationParameters]:
-    # Fix determinism for consistent results
-    set_determinism(seed=seed)
-
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs["weights_file"] = weights_file
@@ -367,7 +363,7 @@ def setup_evaluation(
         num_classes=num_classes,
         num_channels=3 if rgb else 1,
         label_names=label_names[2 - int(pad) - int(include_background) :],
-        input_image_shape=(image_size, image_size),
+        input_image_shape=image_size,
         weights_file=weights_file,
         total_data=len(data),
         batch_size=batch_size,
@@ -378,7 +374,6 @@ def setup_evaluation(
         foreground_labels=foreground_labels,
         loss_weights=loss_kwargs.get("weights", None),
         include_background=include_background,
-        seed=seed,
     )
 
     model_kwargs.update(
@@ -408,7 +403,7 @@ def setup_evaluation(
     _logger.info("Starting evaluation...")
 
     model = model_creator(**model_kwargs)
-    evaluation_objects = setup.setup_evaulation_objects(
+    evaluation_objects = setup.setup_evaluation_objects(
         device,
         data=data,
         num_classes=num_classes,
@@ -439,7 +434,6 @@ def run_evaluation(
     batch_size: int = 1,
     num_workers: int | None = None,
     log_mlflow: bool = False,
-    submit_training_images: bool = False,
     seed: int = 42,
 ) -> None:
     weights_file = Path(weights_file)
@@ -477,7 +471,6 @@ def run_evaluation(
         num_workers=num_workers,
         dataset_type=dataset_type,
         dataset_kwargs=dataset_kwargs,
-        seed=seed,
     )
     validate.evaluate(
         evaluation_objects=evaulation_objects,

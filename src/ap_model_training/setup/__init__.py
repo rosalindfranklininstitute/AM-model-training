@@ -20,7 +20,9 @@ from ap_model_training.setup.train import (
 from ap_model_training.setup.eval import (
     EvaluationObjects,
     EvaluationParameters,
-    setup_evaulation_objects,
+    setup_evaluation_objects,
+)
+from ap_model_training.setup.stage import StageObjects
 )
 
 if typing.TYPE_CHECKING:
@@ -37,7 +39,8 @@ __all__ = [
     "setup_training_objects",
     "EvaluationObjects",
     "EvaluationParameters",
-    "setup_evaulation_objects",
+    "setup_evaluation_objects",
+    "StageObjects",
 ]
 
 

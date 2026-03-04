@@ -1,18 +1,24 @@
 from __future__ import annotations
 import logging
 import typing
-from dataclasses import dataclass, field, InitVar, asdict
+from dataclasses import dataclass, field, asdict
 
 import torch
 
-from monai.utils.misc import first
-from monai import data, transforms, inferers
+from monai import transforms, inferers
 
 from ap_model_training.metrics import Metrics
+from ap_model_training.setup.stage import StageObjects
+from ap_model_training.setup.abstract import (
+    _AbstractLossObjects,
+    _AbstractModelObjects,
+)
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
+
+    from monai import data
 
 _logger = logging.getLogger(__name__)
 
@@ -25,7 +31,7 @@ class EvaluationParameters:
     num_classes: int
     num_channels: int
     label_names: tuple[str, ...]
-    input_image_shape: tuple[int, int]
+    input_image_shape: int
     total_data: int
     batch_size: int
     key_metrics: list[str]
@@ -33,7 +39,6 @@ class EvaluationParameters:
     loss_weights: tuple[float, ...] | None = None
     metrics: dict[str, float] = field(init=False)
     include_background: bool = False
-    seed: int = 42
 
     def __post_init__(self):
         self.output_path = str(self.output_path)  # Ensure JSON serializable
@@ -53,65 +58,14 @@ class EvaluationParameters:
 
 
 @dataclass
-class EvaluationObjects:
-    data: data.Dataset
-    device: torch.device
-    model: torch.nn.Module
-    loss_function: torch.nn.Module
-    metrics: Metrics
-    post_transform: transforms.Transform | Callable = lambda x: x
-    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    dataloader: data.DataLoader = field(init=False)
-    # InitVars:
-    data_workers: InitVar[int] = 4
-    batch_size: InitVar[int] = 1
-    check_loaders: InitVar[bool] = True
-
-    def __post_init__(
-        self,
-        data_workers: int,
-        batch_size: int,
-        check_loaders: bool,
-    ) -> None:
-        self.dataloader = self.load_data(
-            workers=data_workers,
-            batch_size=batch_size,
-            check_data_loads=check_loaders,
-        )
+class EvaluationObjects(_AbstractLossObjects, _AbstractModelObjects):
+    validation: StageObjects
 
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)
 
-    def load_data(
-        self,
-        workers: int,
-        batch_size: int,
-        check_data_loads: bool = True,
-    ) -> data.dataloader.DataLoader:
-        pin_memory = self.device.type == "cuda"
 
-        if check_data_loads:
-            # Check data loads
-            check_loader = data.DataLoader(
-                self.data,
-                batch_size=10,
-                num_workers=2,
-                pin_memory=pin_memory,
-            )
-            first_batch = first(check_loader)
-            assert first_batch is not None, "DataLoader check failed"
-
-        return data.dataloader.DataLoader(
-            self.data,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=workers,
-            pin_memory=pin_memory,
-            persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
-        )
-
-
-def setup_evaulation_objects(
+def setup_evaluation_objects(
     device: torch.device,
     data: data.Dataset,
     num_classes: int,
@@ -119,7 +73,6 @@ def setup_evaulation_objects(
     loss_function: torch.nn.Module,
     batch_size: int,
     num_workers: int | None = None,
-    **kwargs: typing.Any,
 ) -> EvaluationObjects:
     metrics = Metrics(device=device, num_classes=num_classes)
 
@@ -136,16 +89,21 @@ def setup_evaulation_objects(
 
     if num_workers is None:
         num_workers = batch_size * 4
+    validation_objects = StageObjects(
+        metrics=metrics,
+        data=data,
+        device=device,
+        data_workers=num_workers,
+        batch_size=batch_size,
+        shuffle=False,
+        check_loaders=False,
+        inferer=inferers.SimpleInferer(),
+        post_transform=post_transform,
+    )
 
     return EvaluationObjects(
-        data,
         device=device,
         model=model,
         loss_function=loss_function,
-        metrics=metrics,
-        post_transform=post_transform,
-        data_workers=num_workers,
-        batch_size=batch_size,
-        check_loaders=False,
-        **kwargs,
+        validation=validation_objects,
     )

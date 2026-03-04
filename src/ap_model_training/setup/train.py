@@ -1,22 +1,27 @@
 from __future__ import annotations
 import logging
 import typing
-from dataclasses import dataclass, field, InitVar, asdict
+from dataclasses import dataclass, field, asdict
 
 import numpy as np
 
 import torch
 from torch.amp.grad_scaler import GradScaler
 
-from monai.utils.misc import first
 from monai import data, transforms, inferers
 
 from ap_model_training.schedulers import lr_scheduler_creation_functions
 from ap_model_training.metrics import Metrics
+from ap_model_training.setup.stage import StageObjects
+from ap_model_training.setup.abstract import (
+    _AbstractLossObjects,
+    _AbstractModelObjects,
+    _AbstractTrainObjects,
+)
 
 if typing.TYPE_CHECKING:
     from os import PathLike
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
 
 _logger = logging.getLogger(__name__)
 
@@ -29,7 +34,7 @@ class TrainingParameters:
     num_classes: int
     num_channels: int
     label_names: tuple[str, ...]
-    input_image_shape: tuple[int, int]
+    input_image_shape: int
     learning_rate: float
     best_metric: str
     max_epochs: int
@@ -102,87 +107,14 @@ class TrainingParameters:
 
 
 @dataclass
-class TrainingObjects:
-    training_data: data.Dataset
-    validation_data: data.Dataset
-    device: torch.device
-    model: torch.nn.Module
-    loss_function: torch.nn.Module
-    optimizer: torch.optim.Optimizer
-    lr_scheduler: torch.optim.lr_scheduler.LRScheduler
-    train_metrics: Metrics
-    val_metrics: Metrics
-    grad_scaler: GradScaler | None = None
-    post_transform: transforms.Transform | Callable = lambda x: x
-    training_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    validation_inferer: inferers.Inferer = field(default_factory=inferers.SimpleInferer)
-    training_dataloader: data.DataLoader = field(init=False)
-    validation_dataloader: data.DataLoader = field(init=False)
-    # InitVars:
-    training_data_workers: InitVar[int] = 4
-    validation_data_workers: InitVar[int] = 4
-    training_batch_size: InitVar[int] = 2
-    validation_batch_size: InitVar[int] = 2
-    check_loaders: InitVar[bool] = True
-
-    def __post_init__(
-        self,
-        training_data_workers: int,
-        validation_data_workers: int,
-        training_batch_size: int,
-        validation_batch_size: int,
-        check_loaders: bool,
-    ) -> None:
-        self.training_dataloader, self.validation_dataloader = self.load_data(
-            check_data_loads=check_loaders,
-            training_workers=training_data_workers,
-            training_batch_size=training_batch_size,
-            validation_batch_size=validation_batch_size,
-            validation_workers=validation_data_workers,
-        )
+class TrainingObjects(
+    _AbstractLossObjects, _AbstractTrainObjects, _AbstractModelObjects
+):
+    training: StageObjects
+    validation: StageObjects
 
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)
-
-    def load_data(
-        self,
-        training_workers: int,
-        validation_workers: int,
-        training_batch_size: int,
-        validation_batch_size: int,
-        check_data_loads: bool = True,
-    ) -> tuple[data.dataloader.DataLoader, data.dataloader.DataLoader]:
-        pin_memory = self.device.type == "cuda"
-
-        if check_data_loads:
-            # Check data loads
-            check_loader = data.DataLoader(
-                self.training_data,
-                batch_size=10,
-                num_workers=2,
-                pin_memory=pin_memory,
-            )
-            first_batch = first(check_loader)
-            assert first_batch is not None, "DataLoader check failed"
-
-        training_dataloader = data.dataloader.DataLoader(
-            self.training_data,
-            batch_size=training_batch_size,
-            shuffle=True,
-            num_workers=training_workers,
-            pin_memory=pin_memory,
-            persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
-        )
-
-        validation_dataloader = data.dataloader.DataLoader(
-            self.validation_data,
-            batch_size=validation_batch_size,
-            shuffle=False,
-            num_workers=validation_workers,
-            pin_memory=pin_memory,
-            persistent_workers=True,  # Avoids issues when also submitting images via MLFlow
-        )
-        return training_dataloader, validation_dataloader
 
 
 def setup_training_objects(
@@ -199,7 +131,6 @@ def setup_training_objects(
     learning_rate: float = 1e-4,
     lr_scheduler_name: str = "onecyclelr",
     lr_scheduler_kwargs: dict[str, typing.Any] | None = None,
-    **kwargs: typing.Any,
 ) -> TrainingObjects:
     if lr_scheduler_kwargs is None:
         lr_scheduler_kwargs = {}
@@ -233,22 +164,36 @@ def setup_training_objects(
     if num_validation_workers is None:
         num_validation_workers = validation_batch_size * 4
 
+    training_objects = StageObjects(
+        device=device,
+        data=training_data,
+        inferer=inferers.SimpleInferer(),
+        post_transform=post_transform,
+        data_workers=num_training_workers,
+        batch_size=training_batch_size,
+        shuffle=True,
+        check_loaders=False,
+        metrics=train_metrics,
+    )
+    validation_objects = StageObjects(
+        device=device,
+        data=validation_data,
+        inferer=inferers.SimpleInferer(),
+        post_transform=post_transform,
+        data_workers=num_validation_workers,
+        batch_size=validation_batch_size,
+        shuffle=False,
+        check_loaders=False,
+        metrics=val_metrics,
+    )
+
     return TrainingObjects(
-        training_data,
-        validation_data,
         device=device,
         model=model,
-        loss_function=loss_function,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         grad_scaler=grad_scaler,
-        train_metrics=train_metrics,
-        val_metrics=val_metrics,
-        post_transform=post_transform,
-        training_data_workers=num_training_workers,
-        validation_data_workers=num_validation_workers,
-        training_batch_size=training_batch_size,
-        validation_batch_size=validation_batch_size,
-        check_loaders=False,
-        **kwargs,
+        loss_function=loss_function,
+        training=training_objects,
+        validation=validation_objects,
     )

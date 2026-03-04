@@ -15,7 +15,7 @@ if typing.TYPE_CHECKING:
 # May solve potential FD leak
 torch.multiprocessing.set_sharing_strategy("file_system")
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 _logger.propagate = False
 _logger.setLevel(logging.DEBUG)
 for _handler in _logger.handlers:
@@ -126,7 +126,6 @@ def evaluate(
     cpu_only: bool = False,
     gpu_number: int = 0,
     batch_size: int = 1,
-    seed: int = 42,
     log_mlflow: bool = False,
     mlflow_experiment_name: str = "ap_model_evaluating",
 ) -> None:
@@ -175,8 +174,6 @@ def evaluate(
             gpu_number=gpu_number,
             batch_size=batch_size,
             log_mlflow=log_mlflow,
-            submit_training_images=False,
-            seed=seed,
         )
     finally:  # noqa: E722
         try:

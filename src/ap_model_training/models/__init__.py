@@ -158,13 +158,13 @@ def segresnetds2(
 
 def segresnetvae(
     *,
+    input_image_size: int,
     num_channels: int = 3,
     label_count: int = 5,
-    input_image_size=tuple[int, int],
     **kwargs: typing.Any,
 ) -> nets.SegResNetVAE:
     return nets.SegResNetVAE(
-        input_image_size=input_image_size,  # type: ignore
+        input_image_size=(input_image_size, input_image_size),
         spatial_dims=2,
         in_channels=num_channels,
         out_channels=label_count,

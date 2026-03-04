@@ -32,13 +32,14 @@ from ap_model_training.run.utils import (
 )
 
 if typing.TYPE_CHECKING:
-    from os import PathLike
     from ap_model_training.setup import (
         TrainingObjects,
         TrainingParameters,
         EvaluationObjects,
         EvaluationParameters,
+        StageObjects,
     )
+    from ap_model_training.setup.abstract import _AbstractModelObjects
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -57,14 +58,14 @@ def evaluate(
         np.ceil(evaluation_parameters.total_data / evaluation_parameters.batch_size)
     )
 
-    metrics = evaluation_objects.metrics
+    metrics = evaluation_objects.validation.metrics
     metrics.reset()
     evaluation_objects.model.eval()
 
     loss_list: list[float] = []
     with torch.no_grad():
         for step, batch_data in tqdm(
-            enumerate(evaluation_objects.dataloader, 1),
+            enumerate(evaluation_objects.validation.dataloader, 1),
             desc=f"{Path(evaluation_parameters.weights_file).name} validation",
             total=validation_length,
             unit="step",
@@ -78,7 +79,9 @@ def evaluate(
                     images=images,
                     labels=labels,
                     metrics=metrics,
-                    training_objects=evaluation_objects,
+                    loss_function=evaluation_objects.loss_function,
+                    model_objects=evaluation_objects,
+                    stage_objects=evaluation_objects.validation,
                     log_mlflow=log_mlflow,
                 )
             loss_list.append(step_loss)
@@ -128,12 +131,14 @@ def _validate_step(
     images: torch.Tensor,
     labels: torch.Tensor,
     metrics: Metrics,
-    training_objects: TrainingObjects | EvaluationObjects,
+    loss_function: torch.nn.Module,
+    model_objects: _AbstractModelObjects,
+    stage_objects: StageObjects,
     log_mlflow: bool = False,
 ) -> float:
-    with autocast(training_objects.device.type):
-        outputs = training_objects.validation_inferer(images, training_objects.model)
-        loss = training_objects.loss_function(outputs, labels)
+    with autocast(model_objects.device.type):
+        outputs = stage_objects.inferer(images, model_objects.model)
+        loss = loss_function(outputs, labels)
 
     loss_value = loss.item()
 
@@ -150,7 +155,7 @@ def _validate_step(
         y=labels,
         y_pred=torch.stack(
             [
-                training_objects.post_transform(_)
+                stage_objects.post_transform(_)
                 for _ in decollate_batch(outputs)  # type: ignore
             ],
         ),
@@ -171,14 +176,14 @@ def validate(
         )
     )
 
-    metrics = training_objects.val_metrics
+    metrics = training_objects.validation.metrics
     metrics.reset()
     training_objects.model.eval()
 
     loss_list: list[float] = []
     with torch.no_grad():
         for step, batch_data in tqdm(
-            enumerate(training_objects.validation_dataloader, 1),
+            enumerate(training_objects.validation.dataloader, 1),
             desc=f"Epoch {epoch} validation",
             total=epoch_len,
             unit="step",
@@ -192,7 +197,9 @@ def validate(
                     images=images,
                     labels=labels,
                     metrics=metrics,
-                    training_objects=training_objects,
+                    loss_function=training_objects.loss_function,
+                    model_objects=training_objects,
+                    stage_objects=training_objects.validation,
                     log_mlflow=log_mlflow,
                 )
             loss_list.append(step_loss)
@@ -210,17 +217,16 @@ def validate(
         key_metrics=training_parameters.key_val_metrics,
     )
 
-    stage = "val"
     best_epoch = training_parameters.update_metrics(
-        epoch=epoch, metrics=epoch_metrics_dict, stage=stage
+        epoch=epoch, metrics=epoch_metrics_dict, stage="val"
     )
 
     metrics.reset()
 
     if log_mlflow:
         metrics_to_log = get_metrics_to_log(
-            stage,
-            training_parameters.current_metrics[stage],
+            "val",
+            training_parameters.current_metrics["val"],
             training_parameters.label_names,
         )
 

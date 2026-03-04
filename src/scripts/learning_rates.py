@@ -18,7 +18,7 @@ _handler.setFormatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S'"
     )
 )
-_logger = logging.getLogger("adaptive_milling_training")
+_logger = logging.getLogger(__name__)
 for _ in _logger.handlers:
     _logger.removeHandler(_)
 _logger.setLevel(logging.DEBUG)

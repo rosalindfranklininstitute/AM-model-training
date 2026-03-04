@@ -61,7 +61,7 @@ def submit_validation_images_to_mflow(
     )
     with torch.no_grad():
         for data in tqdm(
-            training_objects.validation_dataloader,
+            training_objects.validation.dataloader,
             desc="Submitting validation images from best validation epoch to MLFlow",
             total=epoch_len,
             unit="step",
@@ -72,13 +72,13 @@ def submit_validation_images_to_mflow(
                 data[MONAI_KEYS.LABEL].to(training_objects.device),
             )
             with autocast(training_objects.device.type):
-                outputs = training_objects.validation_inferer(
+                outputs = training_objects.validation.inferer(
                     images, training_objects.model
                 )
 
             outputs = torch.stack(
                 [
-                    training_objects.post_transform(_)
+                    training_objects.validation.post_transform(_)
                     for _ in decollate_batch(outputs)  # type: ignore
                 ]
             )
@@ -182,6 +182,34 @@ def submit_images_to_mlflow(
 
 
 def log_training_objects_to_mlflow(training_objects: TrainingObjects) -> None:
+    def log_types(name, obj) -> None:
+        if isinstance(obj, Dataset):
+            mlflow.log_param(
+                f"{name}_transforms",
+                tuple(
+                    f"{_.__class__.__name__}({_.__dict__})"
+                    for _ in obj.transform.transforms
+                ),
+            )
+        elif isinstance(obj, Compose):
+            mlflow.log_param(
+                name,
+                tuple(
+                    f"{_.__class__.__name__}({dict(((k, v) for k, v in _.__dict__.items() if not k.startswith('_')))})"
+                    for _ in obj.transforms
+                ),
+            )
+        elif hasattr(obj, "__dict__"):
+            mlflow.log_param(
+                name,
+                f"{obj.__class__.__name__}({obj.__dict__})",
+            )
+        else:
+            mlflow.log_param(
+                name,
+                str(obj),
+            )
+
     for name, obj in training_objects.asdict().items():
         if name == "model":
             continue
@@ -192,32 +220,13 @@ def log_training_objects_to_mlflow(training_objects: TrainingObjects) -> None:
             )
             continue
         try:
-            if isinstance(obj, Dataset):
-                mlflow.log_param(
-                    f"{name}_transforms",
-                    tuple(
-                        f"{_.__class__.__name__}({_.__dict__})"
-                        for _ in obj.transform.transforms
-                    ),
-                )
-            elif isinstance(obj, Compose):
-                mlflow.log_param(
-                    name,
-                    tuple(
-                        f"{_.__class__.__name__}({dict(((k, v) for k, v in _.__dict__.items() if not k.startswith('_')))})"
-                        for _ in obj.transforms
-                    ),
-                )
-            elif hasattr(obj, "__dict__"):
-                mlflow.log_param(
-                    name,
-                    f"{obj.__class__.__name__}({obj.__dict__})",
-                )
+            if name == "training":
+                for sub_name, sub_obj in obj.items():
+                    log_types(f"training_{sub_name}", sub_obj)
+            elif name == "validation":
+                for sub_name, sub_obj in obj.items():
+                    log_types(f"validation_{sub_name}", sub_obj)
             else:
-                mlflow.log_param(
-                    name,
-                    str(obj),
-                )
-
+                log_types(name, obj)
         except Exception:
             _logger.warning("Failed to log '%s'", name, exc_info=True)
