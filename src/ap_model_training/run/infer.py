@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 from importlib.metadata import distributions
 
+import tifffile
 import numpy as np
-from PIL import Image
 
 import torch
 from torch.amp import autocast
@@ -56,7 +56,7 @@ def run(
 
     # Get image paths in the order that the sampler will index them
     input_paths = [
-        Path(inference_objects.data.data[_]).resolve()
+        Path(inference_objects.data.data[_][MONAI_KEYS.IMAGE]).resolve()
         for _ in inference_objects.dataloader.sampler
     ]
 
@@ -90,6 +90,10 @@ def run(
                     save_path = output_path / f"{path.stem}_label.tif"
 
                 _logger.info("Saving to %s", save_path)
-                Image.fromarray(image.numpy(force=True)).save(
-                    path.with_name(f"{path.stem}.tif")
-                )
+                with tifffile.TiffWriter(save_path) as tiff:
+                    tiff.write(
+                        image.numpy(force=True)[0, :, :].astype(np.uint8),
+                        photometric=tifffile.PHOTOMETRIC.MINISBLACK,
+                        dtype="uint8",
+                        compression=tifffile.COMPRESSION.LZW,
+                    )

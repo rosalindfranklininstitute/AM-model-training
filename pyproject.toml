@@ -31,7 +31,8 @@ dependencies = [
     "segmentation-models-pytorch>=0.2.0",
     "monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard,ignite]",
     "torchmetrics",
-
+    "tifffile",
+    "imagecodecs",
 ]
 
 [project.urls]

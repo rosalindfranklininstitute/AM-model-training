@@ -636,7 +636,8 @@ def run_inference(
 
     subdirectory = output_path / f"{weights_file.stem}_{input_name}"
     try:
-        subdirectory.mkdir()
+        # Less worried about overwriting with inference
+        subdirectory.mkdir(exist_ok=True)
     except OSError:
         _logger.error(
             "Failed to create subdirectory '%s'",

@@ -46,6 +46,22 @@ class InferenceParameters:
 class InferenceObjects(_AbstractInferenceObjects, _AbstractModelObjects):
     device: torch.device
 
+    def __post_init__(  #  # pyright: ignore[reportGeneralTypeIssues]
+        self,
+        data_workers: int,  # type: ignore
+        batch_size: int,  # type: ignore
+        shuffle: bool,  # type: ignore
+        check_loaders: bool,  # type: ignore
+    ) -> None:
+        _AbstractInferenceObjects.__post_init__(
+            self,
+            device=self.device,
+            data_workers=data_workers,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            check_loaders=check_loaders,
+        )
+
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)
 
@@ -57,7 +73,6 @@ def setup_inference_objects(
     batch_size: int,
     num_workers: int | None = None,
 ) -> InferenceObjects:
-
     post_transform = transforms.Compose(
         [
             transforms.AsDiscrete(
