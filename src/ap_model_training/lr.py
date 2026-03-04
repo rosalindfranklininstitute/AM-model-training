@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
     from ap_model_training.setup import TrainingObjects
 
 
-_logger = logging.getLogger("adaptive_milling_training")
+_logger = logging.getLogger(__name__)
 
 
 def get_device(cpu_only: bool = False) -> torch.device:
@@ -45,8 +45,8 @@ def find_learning_rate(
         device=training_objects.device,
     )
     lr_finder.range_test(
-        training_objects.training_dataloader,
-        training_objects.validation_dataloader,
+        training_objects.training.dataloader,
+        training_objects.validation.dataloader,
         start_lr=lower_learning_rate,
         end_lr=upper_learning_rate,
         num_iter=iterations,
@@ -99,7 +99,6 @@ def plot_learning_rates(
         df,
         image_size=image_size,
         validation_split=0.15,
-        dataset_type=setup.CryoSEMDataset,
         rgb=True,
         pad=False,
         # dataset_type=CacheDataset,
@@ -111,10 +110,13 @@ def plot_learning_rates(
     label_names = ("padding", "background", "gis", "lamella", "crack", "vacuum")
 
     training_parameters = setup.TrainingParameters(
+        output_path="",
+        run_id="learning_rates_plotting",
+        model_name="",
         num_classes=num_classes,
         num_channels=3,
         label_names=label_names[1 - int(include_background) :],
-        input_image_shape=(image_size, image_size),
+        input_image_shape=image_size,
         learning_rate=1e-5,
         best_metric="mean_of_key_metrics",
         key_train_metrics=[
@@ -126,7 +128,6 @@ def plot_learning_rates(
             "mean_dice",
         ],
         max_epochs=80,
-        model_path="",
         train_patience=20,
         val_patience=10,
         total_training_data=len(training_data),
@@ -202,6 +203,8 @@ def plot_learning_rates(
                 model=model,
                 num_classes=training_parameters.num_classes,
                 lr_scheduler_kwargs=lr_scheduler_kwargs,
+                training_batch_size=6,
+                validation_batch_size=1,
             )
 
             find_learning_rate(
