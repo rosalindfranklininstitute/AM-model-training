@@ -33,6 +33,7 @@ dependencies = [
     "torchmetrics",
     "tifffile",
     "imagecodecs",
+    "tqdm",
 ]
 
 [project.urls]
@@ -55,9 +56,6 @@ exclude = [
 ]
 
 [project.optional-dependencies]
-progress = [
-    "tqdm",
-]
 test = [
   "pytest",
   "pytest-cov",
