@@ -430,7 +430,6 @@ def run_evaluation(
     batch_size: int = 1,
     num_workers: int | None = None,
     log_mlflow: bool = False,
-    seed: int = 42,
 ) -> None:
     weights_file = Path(weights_file)
     output_path = Path(output_path)
