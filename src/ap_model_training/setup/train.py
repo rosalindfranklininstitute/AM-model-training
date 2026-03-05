@@ -47,7 +47,6 @@ class TrainingParameters:
     key_train_metrics: list[str]
     key_val_metrics: list[str]
     frozen_epochs: int = 0
-    foreground_labels: tuple[int, ...] = field(default_factory=tuple)
     loss_weights: tuple[float, ...] | None = None
     current_metrics: dict[str, dict[str, float]] = field(init=False)
     best_metrics: dict[str, dict[str, float]] = field(init=False)

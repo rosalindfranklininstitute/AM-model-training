@@ -35,7 +35,6 @@ class EvaluationParameters:
     total_data: int
     batch_size: int
     key_metrics: list[str]
-    foreground_labels: tuple[int, ...] = field(default_factory=tuple)
     loss_weights: tuple[float, ...] | None = None
     metrics: dict[str, float] = field(init=False)
     include_background: bool = False

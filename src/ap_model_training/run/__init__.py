@@ -118,7 +118,6 @@ def setup_training(
         _logger.info("Datasets loaded from %s", csv_path)
 
     num_classes = 5
-    foreground_labels = (1, 2, 3)  # before background is added
 
     device = setup.get_device(cpu_only, gpu=gpu_number)
 
@@ -147,7 +146,6 @@ def setup_training(
         val_patience=ceil(20 / validation_interval),
         total_training_data=len(training_data),
         total_validation_data=len(validation_data),
-        foreground_labels=foreground_labels,
         training_batch_size=training_batch_size,
         validation_batch_size=validation_batch_size,
         frozen_epochs=frozen_epochs,
@@ -351,7 +349,6 @@ def setup_evaluation(
     _logger.info("Dataset loaded from %s", csv_path)
 
     num_classes = 5
-    foreground_labels = (1, 2, 3)  # before background is added
 
     device = setup.get_device(cpu_only, gpu=gpu_number)
 
@@ -371,7 +368,6 @@ def setup_evaluation(
             "weighted_average_iou",
             "weighted_average_dice",
         ],
-        foreground_labels=foreground_labels,
         loss_weights=loss_kwargs.get("weights", None),
         include_background=include_background,
     )
