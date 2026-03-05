@@ -258,7 +258,7 @@ def run_training(
         input_name = csv_path.stem
 
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    timestamp_subdirectory = output_path / timestamp
+    timestamp_subdirectory = output_path / f"training_{timestamp}"
     try:
         timestamp_subdirectory.mkdir()
     except OSError:
@@ -271,7 +271,7 @@ def run_training(
 
     training_objects, training_parameters = setup_training(
         output_path=timestamp_subdirectory,
-        run_id=f"{timestamp}_{input_name}_{model_name}",
+        run_id=input_name,
         model_name=model_name,
         csv_path=csv_path,
         training_csv_path=training_csv_path,
@@ -441,7 +441,7 @@ def run_evaluation(
     csv_path = Path(csv)
     input_name = csv_path.stem
 
-    subdirectory = output_path / f"{weights_file.stem}_{input_name}"
+    subdirectory = output_path / f"evaluation_{weights_file.stem}_{input_name}"
     try:
         subdirectory.mkdir()
     except OSError:
@@ -455,7 +455,7 @@ def run_evaluation(
     evaulation_objects, evaluation_parameters = setup_evaluation(
         output_path=subdirectory,
         weights_file=weights_file,
-        run_id=f"{model_name}_{weights_file.stem}_{input_name}",
+        run_id=f"{input_name}_{weights_file.stem}",
         model_name=model_name,
         csv_path=csv_path,
         image_size=image_size,
@@ -632,7 +632,7 @@ def run_inference(
     csv_path = Path(csv)
     input_name = csv_path.stem
 
-    subdirectory = output_path / f"{weights_file.stem}_{input_name}"
+    subdirectory = output_path / f"inference_{weights_file.stem}_{input_name}"
     try:
         # Less worried about overwriting with inference
         subdirectory.mkdir(exist_ok=True)
