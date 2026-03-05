@@ -95,6 +95,7 @@ def create_datasets(
     pad: bool = True,
     rgb: bool = True,
     dataset_type: type[data.Dataset] = data.Dataset,
+    seed: int = 42,
     **dataset_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
     if isinstance(input_data, np.ndarray):
@@ -109,8 +110,8 @@ def create_datasets(
         datalist,
         ratios=(1 - validation_split, validation_split),
         num_partitions=2,
-        seed=42,
-        shuffle=False,
+        seed=seed,
+        shuffle=True,
     )
 
     return (

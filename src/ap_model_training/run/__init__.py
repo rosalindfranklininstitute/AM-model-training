@@ -113,6 +113,7 @@ def setup_training(
             dataset_type=dataset_type,
             pad=pad,
             rgb=rgb,
+            seed=seed,
             **dataset_kwargs,
         )
         _logger.info("Datasets loaded from %s", csv_path)
