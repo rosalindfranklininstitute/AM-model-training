@@ -23,50 +23,6 @@ def log_exp_softmax_activation(tensor: torch.Tensor) -> torch.Tensor:
     return torch.log_softmax(tensor, dim=1).exp()
 
 
-def loss_wrapper(
-    loss_fn: Callable[[Tensor, Tensor], Tensor],
-    include_background: bool = True,
-    to_onehot_y: bool = False,
-    sigmoid: bool = False,
-    softmax: bool = False,
-    other_act: Callable | None = None,
-) -> Callable[[Tensor, Tensor], Tensor]:
-    def wrapped_loss(input: Tensor, target: Tensor, *args, **kwargs):
-        # Adapted from the beginning of DiceLoss.forward to apply it to other loss functions that are missing it
-        if sigmoid:
-            input = torch.sigmoid(input)
-
-        n_pred_ch = input.shape[1]
-        if softmax:
-            if n_pred_ch == 1:
-                warnings.warn("single channel prediction, `softmax=True` ignored.")
-            else:
-                input = torch.softmax(input, 1)
-
-        if other_act is not None:
-            input = other_act(input)
-
-        if to_onehot_y:
-            if n_pred_ch == 1:
-                warnings.warn("single channel prediction, `to_onehot_y=True` ignored.")
-            else:
-                target = one_hot(target, num_classes=n_pred_ch)
-
-        if not include_background:
-            if n_pred_ch == 1:
-                warnings.warn(
-                    "single channel prediction, `include_background=False` ignored."
-                )
-            else:
-                # if skipping background, removing first channel
-                target = target[:, 1:]
-                input = input[:, 1:]
-
-        return loss_fn(input, target, *args, **kwargs)
-
-    return wrapped_loss
-
-
 def diceloss(include_background: bool, weights: Tensor, **kwargs) -> losses.DiceLoss:
     if not include_background:
         # DiceLoss doesn't trim the first weight value:
