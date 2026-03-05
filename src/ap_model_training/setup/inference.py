@@ -32,7 +32,6 @@ class InferenceParameters:
     total_data: int
     batch_size: int
     include_background: bool = False
-    seed: int = 42
 
     def __post_init__(self) -> None:
         self.output_path = str(self.output_path)  # Ensure JSON serializable
