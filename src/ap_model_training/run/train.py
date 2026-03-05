@@ -137,6 +137,9 @@ def run(
             model_signature = None
 
         if training_parameters.frozen_epochs > 0:
+            _logger.info(
+                "Freezing encoder for %i epochs", training_parameters.frozen_epochs
+            )
             # Freeze model if some initial epochs will be frozen
             for param in training_objects.model.encoder.parameters():  # type: ignore
                 param.requires_grad = False
@@ -231,6 +234,8 @@ def run(
                 # Unfreeze (no need if it wasn't frozen)
                 for param in training_objects.model.encoder.parameters():  # type: ignore
                     param.requires_grad = True
+                _logger.info("Unfrozen encoder after epoch %i", epoch)
+                tqdm.write(f"Unfrozen encoder after epoch {epoch}")
 
             elif (training_parameters.frozen_epochs + 1) < epoch:
                 if val_epoch_metrics is not None and val_stopper.stop_early(
