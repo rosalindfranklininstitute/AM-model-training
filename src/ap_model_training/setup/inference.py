@@ -23,7 +23,6 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class InferenceParameters:
     output_path: str | PathLike[str]
-    run_id: str
     weights_file: str | PathLike[str]
     num_classes: int
     num_channels: int

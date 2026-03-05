@@ -538,7 +538,6 @@ def submit_validation_for_mlflow_run(
 def setup_inference(
     output_path: str | PathLike[str],
     weights_file: str | PathLike[str],
-    run_id: str,
     model_name: str,
     csv_path: str | PathLike[str],
     dataset_type: type[Dataset] = Dataset,
@@ -579,7 +578,6 @@ def setup_inference(
 
     inference_parameters = setup.InferenceParameters(
         output_path=output_path,
-        run_id=run_id,
         num_classes=num_classes,
         num_channels=3 if rgb else 1,
         label_names=label_names[2 - int(pad) - int(include_background) :],
@@ -649,7 +647,6 @@ def run_inference(
     inference_objects, inference_parameters = setup_inference(
         output_path=subdirectory,
         weights_file=weights_file,
-        run_id=f"{model_name}_{weights_file.stem}_{input_name}",
         model_name=model_name,
         csv_path=csv_path,
         dataset_type=dataset_type,
