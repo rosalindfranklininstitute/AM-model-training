@@ -87,6 +87,28 @@ def create_dataset(
     )
 
 
+def partition_datasets(
+    input_data: NDArray[np.str_] | pd.DataFrame,
+    validation_split: float = 0.2,
+    seed: int = 42,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    if isinstance(input_data, np.ndarray):
+        datalist = [
+            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
+        ]
+    elif isinstance(input_data, pd.DataFrame):
+        datalist = input_data.to_dict(orient="records")
+    else:
+        raise TypeError(f"Unsupported data type '{type(data)}'")
+    return data.partition_dataset(  # type: ignore
+        datalist,
+        ratios=(1 - validation_split, validation_split),
+        num_partitions=2,
+        seed=seed,
+        shuffle=True,
+    )
+
+
 def create_datasets(
     input_data: NDArray[np.str_] | pd.DataFrame,
     image_size: int,
@@ -98,20 +120,8 @@ def create_datasets(
     seed: int = 42,
     **dataset_kwargs: typing.Any,
 ) -> tuple[data.Dataset, data.Dataset]:
-    if isinstance(input_data, np.ndarray):
-        datalist = [
-            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
-        ]
-    elif isinstance(input_data, pd.DataFrame):
-        datalist = input_data.to_dict(orient="records")
-    else:
-        raise TypeError(f"Unsupported data type '{type(data)}'")
-    train, validate = data.partition_dataset(
-        datalist,
-        ratios=(1 - validation_split, validation_split),
-        num_partitions=2,
-        seed=seed,
-        shuffle=True,
+    train, validate = partition_datasets(
+        input_data=input_data, validation_split=validation_split, seed=seed
     )
 
     return (
