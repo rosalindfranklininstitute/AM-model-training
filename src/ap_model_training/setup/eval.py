@@ -13,6 +13,7 @@ from ap_model_training.setup.abstract import (
     _AbstractLossObjects,
     _AbstractModelObjects,
 )
+from ap_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -38,10 +39,12 @@ class EvaluationParameters:
     loss_weights: tuple[float, ...] | None = None
     metrics: dict[str, float] = field(init=False)
     include_background: bool = False
+    package_version: str = field(init=False)
 
     def __post_init__(self):
         self.output_path = str(self.output_path)  # Ensure JSON serializable
         self.weights_file = str(self.weights_file)
+        self.package_version = __version__
 
     def update_metrics(
         self,

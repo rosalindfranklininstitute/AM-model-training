@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 import typing
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, field, asdict
 
 import torch
 
@@ -11,6 +11,7 @@ from ap_model_training.setup.abstract import (
     _AbstractInferenceObjects,
     _AbstractModelObjects,
 )
+from ap_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -31,10 +32,12 @@ class InferenceParameters:
     total_data: int
     batch_size: int
     include_background: bool = False
+    package_version: str = field(init=False)
 
     def __post_init__(self) -> None:
         self.output_path = str(self.output_path)  # Ensure JSON serializable
         self.weights_file = str(self.weights_file)  # Ensure JSON serializable
+        self.package_version = __version__
 
     def asdict(self) -> dict[str, typing.Any]:
         return asdict(self)

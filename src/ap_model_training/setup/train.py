@@ -18,6 +18,7 @@ from ap_model_training.setup.abstract import (
     _AbstractModelObjects,
     _AbstractTrainObjects,
 )
+from ap_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -53,11 +54,13 @@ class TrainingParameters:
     include_background: bool = False
     val_interval: int = 2
     seed: int = 42
+    package_version: str = field(init=False)
 
     def __post_init__(self):
         self.output_path = str(self.output_path)  # Ensure JSON serializable
         self.current_metrics = {"train": {}, "val": {}}
         self.best_metrics = {"train": {}, "val": {}}
+        self.package_version = __version__
 
     def update_metrics(
         self,
