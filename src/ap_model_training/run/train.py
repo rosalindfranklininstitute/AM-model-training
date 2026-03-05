@@ -181,11 +181,6 @@ def run(
                     indent=4,
                 )
 
-            if epoch > 0 and epoch == (training_parameters.frozen_epochs + 1):
-                # Unfreeze (no need if it wasn't frozen)
-                for param in training_objects.model.encoder.parameters():  # type: ignore
-                    param.requires_grad = True
-
             epoch_info_str = f"Epoch {epoch}/{training_parameters.max_epochs}, Train Loss: {train_epoch_metrics.loss:.4f}"
             if epoch % training_parameters.val_interval == 0 or best_train_epoch:
                 val_epoch_metrics, best_val_epoch = validate(
@@ -230,8 +225,15 @@ def run(
                     indent=4,
                 )
 
-            if val_epoch_metrics is not None:
-                if training_parameters.frozen_epochs < epoch and val_stopper.stop_early(
+            if training_parameters.frozen_epochs > 0 and epoch == (
+                training_parameters.frozen_epochs + 1
+            ):
+                # Unfreeze (no need if it wasn't frozen)
+                for param in training_objects.model.encoder.parameters():  # type: ignore
+                    param.requires_grad = True
+
+            elif (training_parameters.frozen_epochs + 1) < epoch:
+                if val_epoch_metrics is not None and val_stopper.stop_early(
                     training_parameters.current_metrics["val"][
                         training_parameters.best_metric
                     ]
@@ -241,30 +243,31 @@ def run(
                         "Stopped early after epoch %i due to val stopper", epoch
                     )
                     break
+                elif train_stopper.stop_early(
+                    training_parameters.current_metrics["train"][
+                        training_parameters.best_metric
+                    ]
+                ):
+                    if val_epoch_metrics is None:
+                        _logger.info(
+                            "Starting final validation loop, as train stopper has been triggered but no validation has been run this epoch"
+                        )
+                        val_epoch_metrics, _ = validate(
+                            training_objects,
+                            training_parameters,
+                            epoch=epoch,
+                            log_mlflow=log_mlflow,
+                        )
 
-            if training_parameters.frozen_epochs < epoch and train_stopper.stop_early(
-                training_parameters.current_metrics["train"][
-                    training_parameters.best_metric
-                ]
-            ):
-                if val_epoch_metrics is None:
+                        val_epoch_metrics_dict[epoch] = val_epoch_metrics
+                    tqdm.write(
+                        f"Stopped early after epoch {epoch} due to train stopper"
+                    )
                     _logger.info(
-                        "Starting final validation loop, as train stopper has been triggered but no validation has been run this epoch"
+                        "Stopped early after epoch %i due to train stopper",
+                        epoch,
                     )
-                    val_epoch_metrics, _ = validate(
-                        training_objects,
-                        training_parameters,
-                        epoch=epoch,
-                        log_mlflow=log_mlflow,
-                    )
-
-                    val_epoch_metrics_dict[epoch] = val_epoch_metrics
-                tqdm.write(f"Stopped early after epoch {epoch} due to train stopper")
-                _logger.info(
-                    "Stopped early after epoch %i due to train stopper",
-                    epoch,
-                )
-                break
+                    break
 
         print(
             f"train completed, best metric '{training_parameters.best_metric}': {training_parameters.best_metrics['val'][training_parameters.best_metric]:.4f} at epoch {training_parameters.best_metrics['val']['epoch']}"
