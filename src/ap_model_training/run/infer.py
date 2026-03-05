@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import json
 from pathlib import Path
 from importlib.metadata import distributions
 
@@ -59,6 +60,9 @@ def run(
         Path(inference_objects.data.data[_][MONAI_KEYS.IMAGE]).resolve()
         for _ in inference_objects.dataloader.sampler
     ]
+
+    with (output_path / "inference_parameters.json").open("w+") as f:
+        json.dump(inference_parameters.asdict(), f, indent=4)
 
     with torch.no_grad():
         for step, batch_data in tqdm(
