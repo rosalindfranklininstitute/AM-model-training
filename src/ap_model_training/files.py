@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import typing
 from pathlib import Path
 
@@ -18,14 +19,14 @@ def paths_dataframe_from_csv(fp: str | PathLike[str]) -> pd.DataFrame:
     fp = Path(fp).absolute()
     df = pd.read_csv(
         fp,
-        header=None,
+        header=0,
         names=[MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
         skipinitialspace=True,
         dtype=str,
     )
     base = fp.parent
 
-    df = df.map(lambda _: f"{base / _}")
+    df = df.map(lambda _: f"{base / _}" if not os.path.isabs(_) else _)
 
     return df
 

@@ -24,7 +24,16 @@ def combine_csvs(
 ) -> str | PathLike[str]:
     if len(csvs) == 1:
         return csvs[0]
-    dfs: list[pd.DataFrame] = [pd.read_csv(csv, index_col=0, header=0) for csv in csvs]
+    dfs: list[pd.DataFrame] = [
+        pd.read_csv(
+            csv,
+            index_col=0,
+            header=0,
+            names=[MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+            skipinitialspace=True,
+        )
+        for csv in csvs
+    ]
     merged_df = pd.concat(dfs, axis=0, ignore_index=True)
     merged_df.to_csv(output_path, index=False)
     return output_path
