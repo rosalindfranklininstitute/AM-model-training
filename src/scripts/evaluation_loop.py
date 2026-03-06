@@ -56,7 +56,9 @@ def eval_for_multiple_epochs(
                 mlflow_experiment_name="ap_model_evaluating",
             )
             metrics_path = tuple(
-                (output_path / f"{weights_path.stem}_{csv.stem}").glob("*_metrics.json")
+                (output_path / f"evaluation_{weights_path.stem}_{csv.stem}").glob(
+                    "*_metrics.json"
+                )
             )[0]
             if metrics_path.is_file():
                 with metrics_path.open() as f:
