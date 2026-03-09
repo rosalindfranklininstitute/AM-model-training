@@ -3,7 +3,7 @@ from pathlib import Path
 import typing
 
 from ap_model_training.main import evaluate
-from ap_model_training.utils import combine_csvs
+from ap_model_training.files import combine_csvs
 
 if typing.TYPE_CHECKING:
     from os import PathLike
