@@ -253,11 +253,15 @@ if __name__ == "__main__":
             output_dict = dict(json.load(f))
     else:
         output_path.mkdir(exist_ok=True)
+
+        weights_paths = {
+            k: get_weights_path_of_best_epoch(v)
+            for k, v in training_directories.items()
+        }
+
         output_dict = evaluate_all(
             output_path=output_path,
-            weights_paths={
-                k: get_weights_path_of_best_epoch(v) for k, v in training_directories
-            },
+            weights_paths=weights_paths,
             data_csvs=eval_paths,
             batch_size=6,
             cpu_only=False,
