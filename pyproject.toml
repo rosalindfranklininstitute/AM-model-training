@@ -66,7 +66,6 @@ scripts = [
 ]
 reporting = [
     "mlflow",
-    "tensorboard",
 ]
 
 # Extras that are linked with the PyTorch index for CPU or CUDA version (if using uv)
@@ -190,7 +189,6 @@ typing = [
     "types-pywin32",
     "types-simplejson",
     "types-tabulate",
-    "types-tensorflow",
     "types-ujson",
     "types-xlrd",
 ]
