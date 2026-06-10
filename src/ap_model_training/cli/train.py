@@ -4,7 +4,9 @@ from pathlib import Path
 
 
 def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="CLI for training new models for Adaptive Milling"
+    )
 
     parser.add_argument(
         "-p",
