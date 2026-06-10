@@ -29,10 +29,10 @@ except ImportError:
 from monai.data import decollate_batch, Dataset
 from monai.transforms import Compose
 
-from ap_model_training.utils import MONAI_KEYS
+from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
-    from ap_model_training.setup import TrainingObjects, TrainingParameters
+    from am_model_training.setup import TrainingObjects, TrainingParameters
 
 _logger = logging.getLogger(__name__)
 

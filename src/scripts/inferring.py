@@ -2,8 +2,8 @@ from __future__ import annotations
 import typing
 from pathlib import Path
 
-from ap_model_training.main import infer
-from ap_model_training.files import combine_csvs
+from am_model_training.main import infer
+from am_model_training.files import combine_csvs
 
 if typing.TYPE_CHECKING:
     from os import PathLike

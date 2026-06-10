@@ -8,8 +8,8 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from ap_model_training.main import evaluate
-from ap_model_training.utils import get_weights_path_of_best_epoch
+from am_model_training.main import evaluate
+from am_model_training.utils import get_weights_path_of_best_epoch
 
 if typing.TYPE_CHECKING:
     from collections.abc import Mapping

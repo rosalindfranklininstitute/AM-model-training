@@ -10,7 +10,7 @@ from torchmetrics.classification import (
     MulticlassConfusionMatrix,
 )
 
-from ap_model_training.metrics import get_metrics_from_confusion_matrix
+from am_model_training.metrics import get_metrics_from_confusion_matrix
 
 
 def test_get_metrics_from_confusion_matrix() -> None:

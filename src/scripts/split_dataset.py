@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from ap_model_training.files import paths_dataframe_from_csv
-from ap_model_training.setup import partition_datasets
+from am_model_training.files import paths_dataframe_from_csv
+from am_model_training.setup import partition_datasets
 
 if typing.TYPE_CHECKING:
     from os import PathLike

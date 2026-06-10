@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ap_model_traning"
+name = "AM-model-training"
 description = "Package to train a SEM segmentation model for adaptive polish"
 license = { file = "LICENSE" }
 dynamic = [
@@ -37,14 +37,14 @@ dependencies = [
 ]
 
 [project.urls]
-"Source" = "https://github.com/rosalindfranklininstitute/adaptive-milling-training"
-"Tracker" = "https://github.com/rosalindfranklininstitute/adaptive-milling-training/issues"
+"Source" = "https://github.com/rosalindfranklininstitute/AM-model-training"
+"Tracker" = "https://github.com/rosalindfranklininstitute/AM-model-training/issues"
 
 [tool.setuptools.dynamic]
 readme = { file = "README.md", content-type = "text/markdown" }
 
 [tool.setuptools_scm]
-version_file = "src/ap_model_training/_version.py"
+version_file = "src/am_model_training/_version.py"
 
 [tool.setuptools.packages.find]
 where = [
@@ -56,8 +56,8 @@ exclude = [
 ]
 
 [project.scripts]
-"ap-train" = "ap_model_training.cli.train:main"
-"ap-refine" = "ap_model_training.cli.refine:main"
+"am-train" = "am_model_training.cli.train:main"
+"am-refine" = "am_model_training.cli.refine:main"
 
 [project.optional-dependencies]
 scripts = [
@@ -68,7 +68,7 @@ reporting = [
     "mlflow",
 ]
 all = [
-    "ap_model_traning[scripts,reporting]",
+    "AM-model-training[scripts,reporting]",
 ]
 
 # Extras that are linked with the PyTorch index for CPU or CUDA version (if using uv)

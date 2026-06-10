@@ -3,14 +3,14 @@
 Model training package for [Adaptive Milling](https://github.com/rosalindfranklininstitute/adaptive_milling).
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![CI](https://github.com/rosalindfranklininstitute/adaptive-milling-training/actions/workflows/python-test.yaml/badge.svg)](https://github.com/rosalindfranklininstitute/adaptive-milling-training/actions/workflows/python-test.yaml)
+[![CI](https://github.com/rosalindfranklininstitute/AM-model-training/actions/workflows/python-test.yaml/badge.svg)](https://github.com/rosalindfranklininstitute/AM-model-training/actions/workflows/python-test.yaml)
 
 ## Installation
 
 First clone this repository to your local machine:
 
 ```Shell
-git clone https://github.com/rosalindfranklininstitute/adaptive-milling-training.git
+git clone https://github.com/rosalindfranklininstitute/AM-model-training.git
 cd adaptive_milling
 ```
 
@@ -57,10 +57,10 @@ If using CUDA, the version must be below or equal to the the system CUDA version
 
 ## Usage
 
-### Train a new model: `ap-train`
+### Train a new model: `am-train`
 
 ```
-usage: ap-train [-h] -p CSV_PATH -o OUTPUT_DIRECTORY [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [--frozen FROZEN_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
+usage: am-train [-h] -p CSV_PATH -o OUTPUT_DIRECTORY [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [--frozen FROZEN_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
 
 CLI for training new models for Adaptive Milling
 
@@ -87,10 +87,10 @@ options:
   --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
 ```
 
-### Refine an existing model: `ap-refine`
+### Refine an existing model: `am-refine`
 
 ```
-usage: ap-refine [-h] -p CSV_PATH -o OUTPUT_DIRECTORY -w WEIGHTS_PATH [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
+usage: am-refine [-h] -p CSV_PATH -o OUTPUT_DIRECTORY -w WEIGHTS_PATH [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
 
 CLI for refining models for Adaptive Milling
 
@@ -127,7 +127,7 @@ uv run pytest
 
 ## Issues
 
-Please use the [GitHub issue tracker](https://github.com/rosalindfranklininstitute/adaptive-milling-training/issues) to submit bugs or request features.
+Please use the [GitHub issue tracker](https://github.com/rosalindfranklininstitute/AM-model-training/issues) to submit bugs or request features.
 
 ## Contributions
 

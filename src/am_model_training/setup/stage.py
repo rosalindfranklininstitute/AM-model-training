@@ -4,7 +4,7 @@ import typing
 from dataclasses import dataclass, asdict
 
 
-from ap_model_training.setup.abstract import (
+from am_model_training.setup.abstract import (
     _AbstractInferenceObjects,
     _AbstractMetricsObjects,
 )

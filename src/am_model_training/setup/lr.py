@@ -6,7 +6,7 @@ from monai import optimizers
 
 if typing.TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from ap_model_training.setup.train import TrainingObjects
+    from am_model_training.setup.train import TrainingObjects
 
 _logger = logging.getLogger(__name__)
 

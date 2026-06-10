@@ -9,21 +9,21 @@ import pandas as pd
 import torch
 
 from monai import data, transforms
-from ap_model_training.augmentations import get_transform_list
-from ap_model_training.utils import MONAI_KEYS
+from am_model_training.augmentations import get_transform_list
+from am_model_training.utils import MONAI_KEYS
 
-from ap_model_training.setup.train import (
+from am_model_training.setup.train import (
     TrainingObjects,
     TrainingParameters,
     setup_training_objects,
 )
-from ap_model_training.setup.eval import (
+from am_model_training.setup.eval import (
     EvaluationObjects,
     EvaluationParameters,
     setup_evaluation_objects,
 )
-from ap_model_training.setup.stage import StageObjects
-from ap_model_training.setup.inference import (
+from am_model_training.setup.stage import StageObjects
+from am_model_training.setup.inference import (
     InferenceObjects,
     InferenceParameters,
     setup_inference_objects,
