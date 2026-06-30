@@ -26,12 +26,12 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__package__)
 
 
-def _load_csv(path: str | PathLike[str]) -> DataFrame:
+def _load_csv(path: str | PathLike[str], include_labels: bool = True) -> DataFrame:
     csv_path = Path(path).absolute()
     if not csv_path.is_file():
         raise FileNotFoundError(path)
 
-    return files.paths_dataframe_from_csv(path)
+    return files.paths_dataframe_from_csv(path, include_labels=include_labels)
 
 
 def setup_training(
@@ -556,12 +556,13 @@ def setup_inference(
         dataset_kwargs = {}
 
     data = setup.create_dataset(
-        _load_csv(csv_path),
+        _load_csv(csv_path, include_labels=False),
         image_size=image_size,
         augmentations=False,
         dataset_type=dataset_type,
         pad=pad,
         rgb=rgb,
+        include_labels=False,
         **dataset_kwargs,
     )
     _logger.info("Dataset loaded from %s", csv_path)

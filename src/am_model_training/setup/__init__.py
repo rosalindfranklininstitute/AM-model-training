@@ -58,14 +58,20 @@ def create_dataset(
     *,
     pad: bool = True,
     rgb: bool = True,
+    include_labels: bool = True,
     dataset_type: type[data.Dataset] = data.Dataset,
     **dataset_kwargs: typing.Any,
 ) -> data.Dataset:
     datalist: Sequence
     if isinstance(input_data, np.ndarray):
-        datalist = [
-            {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
-        ]
+        if input_data.shape[1] == 2:
+            datalist = [
+                {MONAI_KEYS.IMAGE: _[0], MONAI_KEYS.LABEL: _[1]} for _ in input_data
+            ]
+        elif input_data.shape[1] == 1:
+            datalist = [{MONAI_KEYS.IMAGE: _} for _ in input_data]
+        else:
+            raise ValueError(f"Invalid number of columns {input_data.shape[1]}")
     elif isinstance(input_data, pd.DataFrame):
         datalist = input_data.to_dict(orient="records")
     elif isinstance(input_data, Sequence):
@@ -81,6 +87,7 @@ def create_dataset(
                 augmentations=augmentations,
                 pad=pad,
                 rgb=rgb,
+                include_labels=include_labels,
             )
         ),
         **dataset_kwargs,
