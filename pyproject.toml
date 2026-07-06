@@ -56,31 +56,6 @@ exclude = [
 ]
 
 [project.optional-dependencies]
-test = [
-  "pytest",
-  "pytest-cov",
-]
-dev = [
-    "ruff",
-    "mypy",
-    "microsoft-python-type-stubs@git+https://github.com/microsoft/python-type-stubs.git",
-    "lxml-stubs",
-    "types-PySocks",
-    "types-Pygments",
-    "types-cffi",
-    "types-defusedxml",
-    "types-openpyxl",
-    "types-paramiko",
-    "types-psutil",
-    "types-pycocotools",
-    "types-pysftp",
-    "types-pywin32",
-    "types-simplejson",
-    "types-tabulate",
-    "types-tensorflow",
-    "types-ujson",
-    "types-xlrd",
-]
 scripts = [
     "jupyter",
     "ipywidgets",
@@ -189,3 +164,34 @@ include = [
 
 [tool.pyright]
 reportPrivateImportUsage = "information"
+
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+typing = [
+    "mypy",
+    "microsoft-python-type-stubs@git+https://github.com/microsoft/python-type-stubs.git",
+    "lxml-stubs",
+    "types-PySocks",
+    "types-Pygments",
+    "types-cffi",
+    "types-defusedxml",
+    "types-openpyxl",
+    "types-paramiko",
+    "types-psutil",
+    "types-pycocotools",
+    "types-pysftp",
+    "types-pywin32",
+    "types-simplejson",
+    "types-tabulate",
+    "types-tensorflow",
+    "types-ujson",
+    "types-xlrd",
+]
+dev = [
+    "ruff",
+    { include-group = "test" },
+    { include-group = "typing" },
+]
