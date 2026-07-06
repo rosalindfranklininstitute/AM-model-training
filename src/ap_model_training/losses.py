@@ -1,10 +1,8 @@
 from __future__ import annotations
-import warnings
 import typing
 
 import torch
 from monai import losses
-from monai.networks.utils import one_hot
 import segmentation_models_pytorch as smp
 
 if typing.TYPE_CHECKING:
