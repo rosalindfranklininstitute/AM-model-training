@@ -142,11 +142,11 @@ explicit = true
 [tool.pytest.ini_options]
 addopts = "-vvvv --cov=src --cov-report term --cov-report html -p no:faulthandler -p no:napari -p no:napari-plugin-engine -p no:npe2"
 testpaths = [
-  "tests",
+    "tests",
 ]
 norecursedirs = [
-  "tests/data",
-  "htmlcov",
+    "tests/data",
+    "htmlcov",
 ]
 
 [tool.mypy]
@@ -156,10 +156,10 @@ follow_untyped_imports = true
 
 [tool.ruff]
 include = [
-  "pyproject.toml",
-  "src/**/*.py",
-  "src/**/*.ipynb",
-  "tests/**/*.py",
+    "pyproject.toml",
+    "src/**/*.py",
+    "src/**/*.ipynb",
+    "tests/**/*.py",
 ]
 
 [tool.pyright]
