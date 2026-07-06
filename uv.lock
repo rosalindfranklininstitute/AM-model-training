@@ -233,10 +233,24 @@ cu128 = [
     { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" } },
     { name = "torchvision", version = "0.23.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" } },
 ]
+reporting = [
+    { name = "mlflow", version = "3.1.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "mlflow", version = "3.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "tensorboard" },
+]
+scripts = [
+    { name = "ipywidgets" },
+    { name = "jupyter" },
+]
+
+[package.dev-dependencies]
 dev = [
     { name = "lxml-stubs" },
     { name = "microsoft-python-type-stubs" },
     { name = "mypy" },
+    { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "pytest", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
+    { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-cffi" },
     { name = "types-defusedxml" },
@@ -254,19 +268,30 @@ dev = [
     { name = "types-ujson" },
     { name = "types-xlrd" },
 ]
-reporting = [
-    { name = "mlflow", version = "3.1.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
-    { name = "mlflow", version = "3.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
-    { name = "tensorboard" },
-]
-scripts = [
-    { name = "ipywidgets" },
-    { name = "jupyter" },
-]
 test = [
     { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
     { name = "pytest", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu113') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cpu' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu118') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu113' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu126') or (extra == 'extra-16-ap-model-traning-cu118' and extra == 'extra-16-ap-model-traning-cu128') or (extra == 'extra-16-ap-model-traning-cu126' and extra == 'extra-16-ap-model-traning-cu128')" },
     { name = "pytest-cov" },
+]
+typing = [
+    { name = "lxml-stubs" },
+    { name = "microsoft-python-type-stubs" },
+    { name = "mypy" },
+    { name = "types-cffi" },
+    { name = "types-defusedxml" },
+    { name = "types-openpyxl" },
+    { name = "types-paramiko" },
+    { name = "types-psutil" },
+    { name = "types-pycocotools" },
+    { name = "types-pygments" },
+    { name = "types-pysftp" },
+    { name = "types-pysocks" },
+    { name = "types-pywin32" },
+    { name = "types-simplejson" },
+    { name = "types-tabulate" },
+    { name = "types-tensorflow" },
+    { name = "types-ujson" },
+    { name = "types-xlrd" },
 ]
 
 [package.metadata]
@@ -274,15 +299,9 @@ requires-dist = [
     { name = "imagecodecs" },
     { name = "ipywidgets", marker = "extra == 'scripts'" },
     { name = "jupyter", marker = "extra == 'scripts'" },
-    { name = "lxml-stubs", marker = "extra == 'dev'" },
-    { name = "microsoft-python-type-stubs", marker = "extra == 'dev'", git = "https://github.com/microsoft/python-type-stubs.git" },
     { name = "mlflow", marker = "extra == 'reporting'" },
     { name = "monai", extras = ["ignite", "itk", "matplotlib", "mlflow", "pandas", "pillow", "scipy", "tensorboard", "tifffile", "tqdm"] },
-    { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpy" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-cov", marker = "extra == 'test'" },
-    { name = "ruff", marker = "extra == 'dev'" },
     { name = "segmentation-models-pytorch", specifier = ">=0.2.0" },
     { name = "tensorboard", marker = "extra == 'reporting'" },
     { name = "tifffile" },
@@ -300,23 +319,57 @@ requires-dist = [
     { name = "torchvision", marker = "extra == 'cu126'", specifier = ">=0.22.0", index = "https://download.pytorch.org/whl/cu126", conflict = { package = "ap-model-traning", extra = "cu126" } },
     { name = "torchvision", marker = "extra == 'cu128'", specifier = ">=0.22.0", index = "https://download.pytorch.org/whl/cu128", conflict = { package = "ap-model-traning", extra = "cu128" } },
     { name = "tqdm" },
-    { name = "types-cffi", marker = "extra == 'dev'" },
-    { name = "types-defusedxml", marker = "extra == 'dev'" },
-    { name = "types-openpyxl", marker = "extra == 'dev'" },
-    { name = "types-paramiko", marker = "extra == 'dev'" },
-    { name = "types-psutil", marker = "extra == 'dev'" },
-    { name = "types-pycocotools", marker = "extra == 'dev'" },
-    { name = "types-pygments", marker = "extra == 'dev'" },
-    { name = "types-pysftp", marker = "extra == 'dev'" },
-    { name = "types-pysocks", marker = "extra == 'dev'" },
-    { name = "types-pywin32", marker = "extra == 'dev'" },
-    { name = "types-simplejson", marker = "extra == 'dev'" },
-    { name = "types-tabulate", marker = "extra == 'dev'" },
-    { name = "types-tensorflow", marker = "extra == 'dev'" },
-    { name = "types-ujson", marker = "extra == 'dev'" },
-    { name = "types-xlrd", marker = "extra == 'dev'" },
 ]
-provides-extras = ["test", "dev", "scripts", "reporting", "cpu", "cu113", "cu118", "cu126", "cu128"]
+provides-extras = ["scripts", "reporting", "cpu", "cu113", "cu118", "cu126", "cu128"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "lxml-stubs" },
+    { name = "microsoft-python-type-stubs", git = "https://github.com/microsoft/python-type-stubs.git" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-cffi" },
+    { name = "types-defusedxml" },
+    { name = "types-openpyxl" },
+    { name = "types-paramiko" },
+    { name = "types-psutil" },
+    { name = "types-pycocotools" },
+    { name = "types-pygments" },
+    { name = "types-pysftp" },
+    { name = "types-pysocks" },
+    { name = "types-pywin32" },
+    { name = "types-simplejson" },
+    { name = "types-tabulate" },
+    { name = "types-tensorflow" },
+    { name = "types-ujson" },
+    { name = "types-xlrd" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+typing = [
+    { name = "lxml-stubs" },
+    { name = "microsoft-python-type-stubs", git = "https://github.com/microsoft/python-type-stubs.git" },
+    { name = "mypy" },
+    { name = "types-cffi" },
+    { name = "types-defusedxml" },
+    { name = "types-openpyxl" },
+    { name = "types-paramiko" },
+    { name = "types-psutil" },
+    { name = "types-pycocotools" },
+    { name = "types-pygments" },
+    { name = "types-pysftp" },
+    { name = "types-pysocks" },
+    { name = "types-pywin32" },
+    { name = "types-simplejson" },
+    { name = "types-tabulate" },
+    { name = "types-tensorflow" },
+    { name = "types-ujson" },
+    { name = "types-xlrd" },
+]
 
 [[package]]
 name = "appnope"
