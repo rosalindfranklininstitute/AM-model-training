@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cu118
-torch==2.5.1
-torchvision==0.20.1
-torchaudio==2.5.1
+torch==2.7.1
+torchvision
+torchaudio==2.7.1
 monai[pillow,pandas,scipy,matplotlib,mlflow,tqdm,tifffile,itk,tensorboard,ignite]
 
 # notebook
