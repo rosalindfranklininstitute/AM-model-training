@@ -56,8 +56,8 @@ exclude = [
 ]
 
 [project.scripts]
-"ap_train" = "ap_model_training.cli.train:main"
-"ap_refine" = "ap_model_training.cli.refine:main"
+"ap-train" = "ap_model_training.cli.train:main"
+"ap-refine" = "ap_model_training.cli.refine:main"
 
 [project.optional-dependencies]
 scripts = [
