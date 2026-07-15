@@ -11,7 +11,7 @@ First clone this repository to your local machine:
 
 ```Shell
 git clone https://github.com/rosalindfranklininstitute/AM-model-training.git
-cd adaptive_milling
+cd AM-model-training
 ```
 
 ### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
