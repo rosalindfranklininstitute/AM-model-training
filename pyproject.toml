@@ -23,7 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.14"
 dependencies = [
     "numpy",
     "torch",
@@ -55,6 +55,10 @@ exclude = [
     "scripts",
 ]
 
+[project.scripts]
+"ap-train" = "ap_model_training.cli.train:main"
+"ap-refine" = "ap_model_training.cli.refine:main"
+
 [project.optional-dependencies]
 scripts = [
     "jupyter",
@@ -62,7 +66,9 @@ scripts = [
 ]
 reporting = [
     "mlflow",
-    "tensorboard",
+]
+all = [
+    "ap_model_traning[scripts,reporting]",
 ]
 
 # Extras that are linked with the PyTorch index for CPU or CUDA version (if using uv)
@@ -186,7 +192,6 @@ typing = [
     "types-pywin32",
     "types-simplejson",
     "types-tabulate",
-    "types-tensorflow",
     "types-ujson",
     "types-xlrd",
 ]
