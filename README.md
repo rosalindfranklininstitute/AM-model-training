@@ -11,7 +11,7 @@ First clone this repository to your local machine:
 
 ```Shell
 git clone https://github.com/rosalindfranklininstitute/AM-model-training.git
-cd adaptive_milling
+cd AM-model-training
 ```
 
 ### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
@@ -24,7 +24,7 @@ uv venv
 .venv\Scripts\activate
 
 # Install including AutoLamella from fibsemOS with the appropriate PyTorch backend for your machine
-uv pip install . --extra ui --torch-backend auto
+uv pip install . --torch-backend auto
 ```
 
 To activate the virtual environment on Linux systems: `source .venv/bin/activate`
