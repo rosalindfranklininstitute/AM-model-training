@@ -80,10 +80,11 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--gpu",
+        default=0,
         type=int,
         dest="gpu_number",
         required=False,
-        help="Number of the GPU to use. (default: %(default)s)",
+        help="Number of the GPU that will be used. (default: %(default)s)",
     )
     parser.add_argument(
         "--cpu",
@@ -134,7 +135,7 @@ def parse_arguments(parser: argparse.ArgumentParser) -> None:
         initial_learning_rate=2e-6,
         max_learning_rate=3e-4,
         save_all_models=namespace.save_all_models,
-        mlflow_experiment_name="ap_model_training",
+        mlflow_experiment_name="am_model_training",
     )
 
 

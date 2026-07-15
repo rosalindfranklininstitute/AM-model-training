@@ -82,7 +82,7 @@ options:
                         The training batch size. Larger numbers will run faster, smaller will require less memory. (default: 6)
   -vb VALIDATION_BATCH_SIZE, --validation-batch VALIDATION_BATCH_SIZE
                         The validation batch size. Larger numbers will run faster, smaller will require less memory. (default: 1)
-  --gpu GPU_NUMBER      Number of the GPU to use. (default: None)
+  --gpu GPU_NUMBER      Number of the GPU that will be used. (default: 0)
   --cpu                 Use the CPU only, ignoring the --gpu setting. This will be extremely slow, so is not recommended.
   --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
 ```
@@ -112,7 +112,7 @@ options:
                         The training batch size. Larger numbers will run faster, smaller will require less memory. (default: 6)
   -vb VALIDATION_BATCH_SIZE, --validation-batch VALIDATION_BATCH_SIZE
                         The validation batch size. Larger numbers will run faster, smaller will require less memory. (default: 1)
-  --gpu GPU_NUMBER      Number of the GPU to use. (default: None)
+  --gpu GPU_NUMBER      Number of the GPU that will be used. (default: 0)
   --cpu                 Use the CPU only, ignoring the --gpu setting. This will be extremely slow, so is not recommended.
   --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
 ```
