@@ -55,6 +55,68 @@ If using CUDA, the version must be below or equal to the the system CUDA version
 | CUDA 12.6        | https://download.pytorch.org/whl/cu126 |
 | CUDA 12.8        | https://download.pytorch.org/whl/cu128 |
 
+## Usage
+
+### Train a new model: `ap-train`
+
+```
+usage: ap-train [-h] -p CSV_PATH -o OUTPUT_DIRECTORY [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [--frozen FROZEN_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
+
+CLI for training new models for Adaptive Milling
+
+options:
+  -h, --help            show this help message and exit
+  -p CSV_PATH, --csv CSV_PATH
+                        Path to a csv file listing paths to image-segmentation pairs. If this argument is given multiple times the files will be combined.
+  -o OUTPUT_DIRECTORY, --output OUTPUT_DIRECTORY
+                        Path to directory where models will be saved. Directory will be created if it doesn't already exist.
+  -v VALIDATION_PATH, --validation-csv VALIDATION_PATH
+                        Path to a csv file listing paths to image-segmentation pairs to be used for validation. This will override the --validation-split argument if specified. If this argument is given multiple times the files will be combined.
+  -s VALIDATION_SPLIT, --validation-split VALIDATION_SPLIT
+                        The validation split to use. This will be ignored if --validation-csv is given. (default: 0.2)
+  -e MAX_EPOCHS, --max-epochs MAX_EPOCHS
+                        The maximum number of epochs to refine for. (default: 100)
+  --frozen FROZEN_EPOCHS
+                        The number of epochs before the encoder is unfrozen. (default: 25)
+  -tb TRAINING_BATCH_SIZE, --training-batch TRAINING_BATCH_SIZE
+                        The training batch size. Larger numbers will run faster, smaller will require less memory. (default: 6)
+  -vb VALIDATION_BATCH_SIZE, --validation-batch VALIDATION_BATCH_SIZE
+                        The validation batch size. Larger numbers will run faster, smaller will require less memory. (default: 1)
+  --gpu GPU_NUMBER      Number of the GPU to use. (default: None)
+  --cpu                 Use the CPU only, ignoring the --gpu setting. This will be extremely slow, so is not recommended.
+  --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
+```
+
+### Refine an existing model: `ap-refine`
+
+```
+usage: ap-refine [-h] -p CSV_PATH -o OUTPUT_DIRECTORY -w WEIGHTS_PATH [-v VALIDATION_PATH] [-s VALIDATION_SPLIT] [-e MAX_EPOCHS] [-tb TRAINING_BATCH_SIZE] [-vb VALIDATION_BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu] [--save-all]
+
+CLI for refining models for Adaptive Milling
+
+options:
+  -h, --help            show this help message and exit
+  -p CSV_PATH, --csv CSV_PATH
+                        Path to a csv file listing paths to image-segmentation pairs. If this argument is given multiple times the files will be combined.
+  -o OUTPUT_DIRECTORY, --output OUTPUT_DIRECTORY
+                        Path to directory where models will be saved. Directory will be created if it doesn't already exist.
+  -w WEIGHTS_PATH, --weights WEIGHTS_PATH
+                        Path to the weights file that will be refined.
+  -v VALIDATION_PATH, --validation-csv VALIDATION_PATH
+                        Path to a csv file listing paths to image-segmentation pairs to be used for validation. This will override the --validation-split argument if specified. If this argument is given multiple times the files will be combined.
+  -s VALIDATION_SPLIT, --validation-split VALIDATION_SPLIT
+                        The validation split to use. This will be ignored if --validation-csv is given. (default: 0.2)
+  -e MAX_EPOCHS, --max-epochs MAX_EPOCHS
+                        The maximum number of epochs to refine for. (default: 50)
+  -tb TRAINING_BATCH_SIZE, --training-batch TRAINING_BATCH_SIZE
+                        The training batch size. Larger numbers will run faster, smaller will require less memory. (default: 6)
+  -vb VALIDATION_BATCH_SIZE, --validation-batch VALIDATION_BATCH_SIZE
+                        The validation batch size. Larger numbers will run faster, smaller will require less memory. (default: 1)
+  --gpu GPU_NUMBER      Number of the GPU to use. (default: None)
+  --cpu                 Use the CPU only, ignoring the --gpu setting. This will be extremely slow, so is not recommended.
+  --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
+```
+
 ## Testing
 
 You can run the package tests using pytest:
