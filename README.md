@@ -24,7 +24,7 @@ uv venv
 .venv\Scripts\activate
 
 # Install including AutoLamella from fibsemOS with the appropriate PyTorch backend for your machine
-uv pip install . --extra ui --torch-backend auto
+uv pip install . --torch-backend auto
 ```
 
 To activate the virtual environment on Linux systems: `source .venv/bin/activate`
