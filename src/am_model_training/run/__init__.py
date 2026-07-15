@@ -11,11 +11,11 @@ import numpy as np
 from monai.data.dataset import Dataset
 from monai.utils import set_determinism
 
-from ap_model_training import setup
-from ap_model_training import files
-from ap_model_training.run import train, validate, infer
-from ap_model_training import models
-from ap_model_training import losses
+from am_model_training import setup
+from am_model_training import files
+from am_model_training.run import train, validate, infer
+from am_model_training import models
+from am_model_training import losses
 
 import mlflow
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="CLI for refining models for Adaptive Milling"
+        description="CLI for training new models for Adaptive Milling"
     )
 
     parser.add_argument(
@@ -24,14 +24,6 @@ def create_parser() -> argparse.ArgumentParser:
         dest="output_directory",
         required=True,
         help="Path to directory where models will be saved. Directory will be created if it doesn't already exist.",
-    )
-    parser.add_argument(
-        "-w",
-        "--weights",
-        type=Path,
-        dest="weights_path",
-        required=True,
-        help="Path to the weights file that will be refined.",
     )
     parser.add_argument(
         "-v",
@@ -54,11 +46,19 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-e",
         "--max-epochs",
-        default=50,
+        default=100,
         type=int,
         dest="max_epochs",
         required=False,
         help="The maximum number of epochs to refine for. (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--frozen",
+        default=25,
+        type=int,
+        dest="frozen_epochs",
+        required=False,
+        help="The number of epochs before the encoder is unfrozen. (default: %(default)s)",
     )
     parser.add_argument(
         "-tb",
@@ -107,8 +107,8 @@ def create_parser() -> argparse.ArgumentParser:
 def parse_arguments(parser: argparse.ArgumentParser) -> None:
     namespace = parser.parse_args()
 
-    from ap_model_training.main import train
-    from ap_model_training.files import combine_csvs
+    from am_model_training.main import train
+    from am_model_training.files import combine_csvs
 
     namespace.output_path.mkdir(exist_ok=True)
 
@@ -126,9 +126,8 @@ def parse_arguments(parser: argparse.ArgumentParser) -> None:
         output_path=namespace.output_path,
         csv=csv,
         max_epochs=namespace.max_epochs,
-        frozen_epochs=0,
+        frozen_epochs=namespace.frozen_epochs,
         validation_split=namespace.validation_split,
-        weights_path=namespace.weights_path,
         cpu_only=namespace.cpu_only,
         gpu_number=namespace.gpu_number,
         training_batch_size=namespace.training_batch_size,
@@ -136,7 +135,7 @@ def parse_arguments(parser: argparse.ArgumentParser) -> None:
         initial_learning_rate=2e-6,
         max_learning_rate=3e-4,
         save_all_models=namespace.save_all_models,
-        mlflow_experiment_name="ap_model_refining",
+        mlflow_experiment_name="am_model_training",
     )
 
 

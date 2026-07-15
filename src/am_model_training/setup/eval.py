@@ -7,13 +7,13 @@ import torch
 
 from monai import transforms, inferers
 
-from ap_model_training.metrics import Metrics
-from ap_model_training.setup.stage import StageObjects
-from ap_model_training.setup.abstract import (
+from am_model_training.metrics import Metrics
+from am_model_training.setup.stage import StageObjects
+from am_model_training.setup.abstract import (
     _AbstractLossObjects,
     _AbstractModelObjects,
 )
-from ap_model_training._version import __version__
+from am_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike

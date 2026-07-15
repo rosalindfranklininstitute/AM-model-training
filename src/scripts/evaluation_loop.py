@@ -6,7 +6,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from ap_model_training.main import evaluate
+from am_model_training.main import evaluate
 
 if typing.TYPE_CHECKING:
     from os import PathLike

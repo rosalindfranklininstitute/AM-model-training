@@ -10,15 +10,15 @@ from torch.amp.grad_scaler import GradScaler
 
 from monai import data, transforms, inferers
 
-from ap_model_training.schedulers import lr_scheduler_creation_functions
-from ap_model_training.metrics import Metrics
-from ap_model_training.setup.stage import StageObjects
-from ap_model_training.setup.abstract import (
+from am_model_training.schedulers import lr_scheduler_creation_functions
+from am_model_training.metrics import Metrics
+from am_model_training.setup.stage import StageObjects
+from am_model_training.setup.abstract import (
     _AbstractLossObjects,
     _AbstractModelObjects,
     _AbstractTrainObjects,
 )
-from ap_model_training._version import __version__
+from am_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike

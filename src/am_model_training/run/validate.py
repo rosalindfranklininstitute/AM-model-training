@@ -24,22 +24,22 @@ except ImportError:
 
 from monai.data import decollate_batch
 
-from ap_model_training.utils import MONAI_KEYS
-from ap_model_training.metrics import MetricsOutput, Metrics
-from ap_model_training.run.utils import (
+from am_model_training.utils import MONAI_KEYS
+from am_model_training.metrics import MetricsOutput, Metrics
+from am_model_training.run.utils import (
     get_mean_of_key_metrics,
     get_metrics_to_log,
 )
 
 if typing.TYPE_CHECKING:
-    from ap_model_training.setup import (
+    from am_model_training.setup import (
         TrainingObjects,
         TrainingParameters,
         EvaluationObjects,
         EvaluationParameters,
         StageObjects,
     )
-    from ap_model_training.setup.abstract import _AbstractModelObjects
+    from am_model_training.setup.abstract import _AbstractModelObjects
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

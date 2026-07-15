@@ -24,8 +24,8 @@ except ImportError:
 
 from monai.data import decollate_batch
 
-from ap_model_training.utils import MONAI_KEYS
-from ap_model_training.setup import InferenceObjects, InferenceParameters
+from am_model_training.utils import MONAI_KEYS
+from am_model_training.setup import InferenceObjects, InferenceParameters
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

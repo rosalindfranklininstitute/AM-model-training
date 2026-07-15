@@ -7,7 +7,7 @@ import typing
 import mlflow
 import torch
 
-from ap_model_training import run
+from am_model_training import run
 
 if typing.TYPE_CHECKING:
     from os import PathLike
@@ -47,10 +47,10 @@ def train(
     save_all_models: bool = False,
     seed: int = 42,
     log_mlflow: bool = False,
-    mlflow_experiment_name: str = "ap_model_training",
+    mlflow_experiment_name: str = "am_model_training",
 ) -> None:
     if log_mlflow:
-        # from ap_model_training.utils import MONAI_LOG_DIR
+        # from am_model_training.utils import MONAI_LOG_DIR
         # Setup MLFlow
         mlflow.pytorch.autolog()
         port = 54598
@@ -130,7 +130,7 @@ def evaluate(
     mlflow_experiment_name: str = "ap_model_evaluating",
 ) -> None:
     if log_mlflow:
-        # from ap_model_training.utils import MONAI_LOG_DIR
+        # from am_model_training.utils import MONAI_LOG_DIR
         # Setup MLFlow
         mlflow.pytorch.autolog()
         port = 54598

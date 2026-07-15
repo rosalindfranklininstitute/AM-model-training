@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 
-from ap_model_training.main import train
+from am_model_training.main import train
 
 if __name__ == "__main__":
     # Input file paths
@@ -27,5 +27,5 @@ if __name__ == "__main__":
         validation_batch_size=1,
         save_all_models=False,
         log_mlflow=False,
-        mlflow_experiment_name="ap_model_training",
+        mlflow_experiment_name="am_model_training",
     )

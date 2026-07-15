@@ -17,7 +17,7 @@ from monai.transforms.io.dictionary import LoadImaged
 from monai.utils.type_conversion import convert_to_tensor
 from monai.data.meta_obj import get_track_meta
 
-from ap_model_training.utils import MONAI_KEYS
+from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from collections.abc import Mapping, Hashable, Collection, Sequence

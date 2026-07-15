@@ -10,7 +10,7 @@ from torch.amp.grad_scaler import GradScaler
 from monai.utils.misc import first
 from monai import data, transforms, inferers
 
-from ap_model_training.metrics import Metrics
+from am_model_training.metrics import Metrics
 
 if typing.TYPE_CHECKING:
     from collections.abc import Callable
