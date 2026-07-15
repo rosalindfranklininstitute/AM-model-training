@@ -1,0 +1,78 @@
+# Adaptive Milling Model Training
+
+Model training package for [Adaptive Milling](https://github.com/rosalindfranklininstitute/adaptive_milling).
+
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![CI](https://github.com/rosalindfranklininstitute/adaptive-milling-training/actions/workflows/python-test.yaml/badge.svg)](https://github.com/rosalindfranklininstitute/adaptive-milling-training/actions/workflows/python-test.yaml)
+
+## Installation
+
+First clone this repository to your local machine:
+
+```Shell
+git clone https://github.com/rosalindfranklininstitute/adaptive-milling-training.git
+cd adaptive_milling
+```
+
+### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
+
+```Shell
+# Create a virtual environment
+uv venv
+
+# Activate the virtual environment (Windows)
+.venv\Scripts\activate
+
+# Install including AutoLamella from fibsemOS with the appropriate PyTorch backend for your machine
+uv pip install . --extra ui --torch-backend auto
+```
+
+To activate the virtual environment on Linux systems: `source .venv/bin/activate`
+
+### [miniforge](https://conda-forge.org/download/)
+
+```Shell
+# Create a virtual environment
+conda create -p ./.venv
+
+# Activate the virtual environment
+conda activate ./.venv
+
+# Install PyTorch (select appropriate compute platform, see table below)
+python -m pip install pytorch --index-url <Index URL>
+
+# Install including AutoLamella from fibsemOS
+python -m pip install -e .
+```
+
+If using CUDA, the version must be below or equal to the the system CUDA version, which can be checked with the command `nvidia-smi`.
+
+| Compute Platform | Index URL                              |
+| ---------------- | -------------------------------------- |
+| CPU              | https://download.pytorch.org/whl/cpu   |
+| CUDA 11.3        | https://download.pytorch.org/whl/cu113 |
+| CUDA 11.8        | https://download.pytorch.org/whl/cu118 |
+| CUDA 12.6        | https://download.pytorch.org/whl/cu126 |
+| CUDA 12.8        | https://download.pytorch.org/whl/cu128 |
+
+## Testing
+
+You can run the package tests using pytest:
+
+```Shell
+uv run pytest
+```
+
+## Issues
+
+Please use the [GitHub issue tracker](https://github.com/rosalindfranklininstitute/adaptive-milling-training/issues) to submit bugs or request features.
+
+## Contributions
+
+If you would like to help contribute to project, please read our [contribution](CONTRIBUTING.md) guide and [code of conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+Copyright Rosalind Franklin Institute, 2025.
+
+Distributed under the terms of the Apache-2.0 license, Adaptive Milling Model Training is free and open source software.
