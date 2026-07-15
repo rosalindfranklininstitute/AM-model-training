@@ -15,7 +15,9 @@ if typing.TYPE_CHECKING:
 __all__ = ["paths_dataframe_from_csv", "paths_array_from_csv"]
 
 
-def paths_dataframe_from_csv(fp: str | PathLike[str]) -> pd.DataFrame:
+def paths_dataframe_from_csv(
+    fp: str | PathLike[str], include_labels: bool = True
+) -> pd.DataFrame:
     fp = Path(fp).absolute()
     df = pd.read_csv(
         fp,
@@ -26,11 +28,13 @@ def paths_dataframe_from_csv(fp: str | PathLike[str]) -> pd.DataFrame:
     base = fp.parent
 
     first_row = df.iloc[0, :]
-    if (
-        first_row[MONAI_KEYS.IMAGE] == MONAI_KEYS.IMAGE
-        and first_row[MONAI_KEYS.LABEL] == MONAI_KEYS.LABEL
+    if first_row[MONAI_KEYS.IMAGE] == MONAI_KEYS.IMAGE and (
+        first_row[MONAI_KEYS.LABEL] == MONAI_KEYS.LABEL or not include_labels
     ):
         df = df.iloc[1:].reset_index(drop=True)
+
+    if not include_labels:
+        df.drop(columns=[MONAI_KEYS.LABEL], inplace=True)
 
     # Make paths absolute relative to the folder containing the csv file
     df = df.map(lambda _: f"{base / _}" if not os.path.isabs(_) else _)

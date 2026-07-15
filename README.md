@@ -117,6 +117,27 @@ options:
   --save-all            Save model weights from all epochs. Otherwise, just the models that improve on previous epochs.
 ```
 
+### Run inference on images: `am-infer`
+
+```
+usage: am-infer [-h] -p CSV_PATH -o OUTPUT_DIRECTORY -w WEIGHTS_PATH [-b BATCH_SIZE] [--gpu GPU_NUMBER] [--cpu]
+
+CLI for inferring images using an Adaptive Milling model
+
+options:
+  -h, --help            show this help message and exit
+  -p CSV_PATH, --csv CSV_PATH
+                        Path to a csv file listing paths to image-segmentation pairs. If this argument is given multiple times the files will be combined.
+  -o OUTPUT_DIRECTORY, --output OUTPUT_DIRECTORY
+                        Path to directory where models will be saved. Directory will be created if it doesn't already exist.
+  -w WEIGHTS_PATH, --weights WEIGHTS_PATH
+                        Path to the weights file that will be refined.
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+                        The batch size. Larger numbers will run faster, smaller will require less memory. (default: 1)
+  --gpu GPU_NUMBER      Number of the GPU that will be used. (default: 0)
+  --cpu                 Use the CPU only, ignoring the --gpu setting. This will be extremely slow, so is not recommended.
+```
+
 ## Testing
 
 You can run the package tests using pytest:

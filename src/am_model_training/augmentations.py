@@ -37,7 +37,10 @@ def get_transform_list(
     rgb: bool = True,
     pad: bool = False,
     dog: bool = False,
+    include_labels: bool = True,
 ) -> list[transforms.transform.MapTransform]:
+    allow_missing_keys = not include_labels
+
     # preprocessing: normalise -> pad -> resize -> to_rgb
     loading = [
         LoadImaged(
@@ -48,23 +51,34 @@ def get_transform_list(
             reverse_indexing=False,
             dtype=np.float32,
         ),
-        LoadImaged(
-            [MONAI_KEYS.LABEL],
-            reader=data.image_reader.PILReader,
-            image_only=True,
-            ensure_channel_first=True,
-            reverse_indexing=False,
-            dtype=np.long,
-        ),
     ]
+    if include_labels:
+        loading.append(
+            LoadImaged(
+                [MONAI_KEYS.LABEL],
+                reader=data.image_reader.PILReader,
+                image_only=True,
+                ensure_channel_first=True,
+                reverse_indexing=False,
+                dtype=np.long,
+            )
+        )
     preprocessing: list[transforms.transform.MapTransform] = [
         NormaliseTransformd([MONAI_KEYS.IMAGE], clamp=(-1, 1)),
     ]
     if pad:
-        preprocessing.append(PadTransformd([MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL]))
+        preprocessing.append(
+            PadTransformd(
+                [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+                allow_missing_keys=allow_missing_keys,
+            )
+        )
     preprocessing.append(
         ResizeTransformd(
-            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL], image_size=image_size, pad=pad
+            [MONAI_KEYS.IMAGE, MONAI_KEYS.LABEL],
+            image_size=image_size,
+            pad=pad,
+            allow_missing_keys=allow_missing_keys,
         )
     )
     if rgb:
@@ -93,8 +107,13 @@ def get_transform_list(
             prob=0.3,
             interpolation=InterpolationMode.BICUBIC,
             mask_interpolation=InterpolationMode.NEAREST_EXACT,
+            allow_missing_keys=allow_missing_keys,
         ),
-        RandGaussianBlurd([MONAI_KEYS.IMAGE], blur_limit=(3, 5), prob=0.3),
+        RandGaussianBlurd(
+            [MONAI_KEYS.IMAGE],
+            blur_limit=(3, 5),
+            prob=0.3,
+        ),
         *preprocessing,
     ]
 

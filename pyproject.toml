@@ -58,6 +58,7 @@ exclude = [
 [project.scripts]
 "am-train" = "am_model_training.cli.train:main"
 "am-refine" = "am_model_training.cli.refine:main"
+"am-infer" = "am_model_training.cli.infer:main"
 
 [project.optional-dependencies]
 scripts = [
