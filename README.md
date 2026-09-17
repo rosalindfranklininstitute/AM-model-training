@@ -7,12 +7,10 @@ Model training package for [Adaptive Milling](https://github.com/rosalindfrankli
 
 ## Installation
 
-First clone this repository to your local machine:
+This package is available from PyPI as [am-model-training](https://pypi.org/p/am-model-training) and can be installed via the following steps:
 
-```Shell
-git clone https://github.com/rosalindfranklininstitute/AM-model-training.git
-cd AM-model-training
-```
+1. Decide where you want to create your Python virtual environment and open a terminal in that location.
+2. Follow the one of the sets of instructions below. We recommend using 'uv' as it handles installing the appropriate torch backend automatically.
 
 ### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
 
@@ -24,7 +22,7 @@ uv venv
 .venv\Scripts\activate
 
 # Install including AutoLamella from fibsemOS with the appropriate PyTorch backend for your machine
-uv pip install . --torch-backend auto
+uv pip install am-model-training --torch-backend auto
 ```
 
 To activate the virtual environment on Linux systems: `source .venv/bin/activate`
@@ -42,7 +40,7 @@ conda activate ./.venv
 python -m pip install pytorch --index-url <Index URL>
 
 # Install including AutoLamella from fibsemOS
-python -m pip install -e .
+python -m pip install -e am-model-training
 ```
 
 If using CUDA, the version must be below or equal to the the system CUDA version, which can be checked with the command `nvidia-smi`.
