@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 import typing
-from dataclasses import dataclass, field, fields, InitVar, asdict
+from dataclasses import InitVar, asdict, dataclass, field, fields
 
 import numpy as np
 import torch
-from torchmetrics.segmentation import DiceScore, MeanIoU
 from torchmetrics.classification import MulticlassConfusionMatrix
+from torchmetrics.segmentation import DiceScore, MeanIoU
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Sequence, Iterable
+    from collections.abc import Iterable, Sequence
 
 
 def get_metrics_from_confusion_matrix(

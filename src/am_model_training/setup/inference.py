@@ -1,17 +1,17 @@
 from __future__ import annotations
+
 import logging
 import typing
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 import torch
+from monai import inferers, transforms
 
-from monai import transforms, inferers
-
+from am_model_training._version import __version__
 from am_model_training.setup.abstract import (
     _AbstractInferenceObjects,
     _AbstractModelObjects,
 )
-from am_model_training._version import __version__
 
 if typing.TYPE_CHECKING:
     from os import PathLike

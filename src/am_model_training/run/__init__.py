@@ -1,26 +1,23 @@
 from __future__ import annotations
+
 import logging
 import typing
+from datetime import datetime, timezone
 from math import ceil
-from datetime import datetime
-from pathlib import Path
 from os import PathLike
+from pathlib import Path
 
+import mlflow
 import numpy as np
-
 from monai.data.dataset import Dataset
 from monai.utils import set_determinism
 
-from am_model_training import setup
-from am_model_training import files
-from am_model_training.run import train, validate, infer
-from am_model_training import models
-from am_model_training import losses
-
-import mlflow
+from am_model_training import files, losses, models, setup
+from am_model_training.run import infer, train, validate
 
 if typing.TYPE_CHECKING:
     from os import PathLike
+
     from pandas import DataFrame
 
 _logger = logging.getLogger(__package__)
@@ -256,15 +253,14 @@ def run_training(
         validation_csv_path = None
         input_name = csv_path.stem
 
-    timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
+    timestamp = datetime.now(tz=timezone.utc).strftime("%y%m%d_%H%M%S")
     timestamp_subdirectory = output_path / f"training_{timestamp}"
     try:
         timestamp_subdirectory.mkdir()
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create timestamp subdirectory '%s'",
             str(timestamp_subdirectory),
-            exc_info=True,
         )
         raise
 
@@ -441,10 +437,9 @@ def run_evaluation(
     try:
         subdirectory.mkdir()
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create subdirectory '%s'",
             str(subdirectory),
-            exc_info=True,
         )
         raise
 
@@ -634,10 +629,9 @@ def run_inference(
         # Less worried about overwriting with inference
         subdirectory.mkdir(exist_ok=True)
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create subdirectory '%s'",
             str(subdirectory),
-            exc_info=True,
         )
         raise
 

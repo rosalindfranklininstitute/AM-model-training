@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 import logging
 import typing
 from pathlib import Path
 
-import torch
-import numpy as np
 import cv2
+import numpy as np
+import torch
 from monai import data
 from monai.utils import ensure_tuple
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Hashable, Collection, Sequence
+    from collections.abc import Collection, Hashable, Sequence
     from os import PathLike
 
     KeysCollection = typing.Union[Collection[Hashable], Hashable]

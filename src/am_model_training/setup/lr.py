@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import logging
 import typing
 
@@ -6,6 +7,7 @@ from monai import optimizers
 
 if typing.TYPE_CHECKING:
     from matplotlib.axes import Axes
+
     from am_model_training.setup.train import TrainingObjects
 
 _logger = logging.getLogger(__name__)

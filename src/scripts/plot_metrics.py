@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import json
 import logging
 import typing
-import json
 from pathlib import Path
 from string import ascii_lowercase
 
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
 if typing.TYPE_CHECKING:
+    from collections.abc import Collection
     from os import PathLike
 
 _logger = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ CLASS_LABELS = ["Background", "GIS", "Lamella", "Crack", "Vacuum"]
 
 
 def __create_cmap() -> ListedColormap:
-    _tab10 = plt.get_cmap("tab10")
+    _tab10 = plt.get_cmap("tab10")  # pyright: ignore[reportAttributeAccessIssue]
     return ListedColormap([_tab10(_) for _ in range(len(CLASS_LABELS))])
 
 
@@ -41,9 +43,9 @@ def plot_metrics(
     frozen_epochs: int | None = None,
     max_epoch: int | None = None,
     log_loss: bool = True,
-    metrics_to_plot: list[
+    metrics_to_plot: Collection[
         typing.Literal["IoU", "Dice", "Accuracy", "Precision", "Recall", "F1"]
-    ] = ["IoU", "Dice", "Accuracy", "Precision", "Recall", "F1"],
+    ] = ("IoU", "Dice", "Accuracy", "Precision", "Recall", "F1"),
 ) -> None:
     plt.rcParams["font.family"] = "Nimbus Sans"
     plt.rcParams["font.size"] = 5
@@ -178,10 +180,9 @@ def plot_metrics(
                     linewidth=0.4,
                 )
         except Exception:
-            _logger.error(
+            _logger.exception(
                 "An exception occurred while plotting the mean and weighted average for train %s",
                 metric_name,
-                exc_info=True,
             )
         ax_train.set_ylim(*metric_ylims)
         ax_train.set_xlabel("Epochs")
@@ -228,10 +229,9 @@ def plot_metrics(
                     linewidth=0.4,
                 )
         except Exception:
-            _logger.error(
+            _logger.exception(
                 "An exception occurred while plotting the mean and weighted average for val %s",
                 metric_name,
-                exc_info=True,
             )
         ax_val.set_ylim(*metric_ylims)
         ax_val.set_xlabel("Epochs")
@@ -240,7 +240,7 @@ def plot_metrics(
         ax_val.legend()
 
     fig.tight_layout()
-    fig.savefig(output_image_path, dpi=600)
+    fig.savefig(str(output_image_path), dpi=600)
     _logger.info("Plot saved to %s", output_image_path)
 
 

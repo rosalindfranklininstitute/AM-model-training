@@ -1,14 +1,14 @@
 from __future__ import annotations
+
 import logging
 import typing
 from abc import ABC
-from dataclasses import dataclass, field, InitVar, asdict
+from dataclasses import InitVar, asdict, dataclass, field
 
 import torch
-from torch.amp.grad_scaler import GradScaler
-
+from monai import data, inferers, transforms
 from monai.utils.misc import first
-from monai import data, transforms, inferers
+from torch.amp.grad_scaler import GradScaler
 
 from am_model_training.metrics import Metrics
 

@@ -1,14 +1,14 @@
 from __future__ import annotations
+
 import typing
 
-import torch
-
 import segmentation_models_pytorch as smp
+import torch
 from monai.networks import nets
 
 if typing.TYPE_CHECKING:
-    from os import PathLike
     from collections.abc import Callable
+    from os import PathLike
 
 
 def retrain_wrapper(

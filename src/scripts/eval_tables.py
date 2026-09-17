@@ -1,10 +1,11 @@
 from __future__ import annotations
-from pathlib import Path
+
 import json
 import typing
+from pathlib import Path
 
-import numpy as np
 import matplotlib as mpl
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -82,11 +83,11 @@ def evaluate_all(
                 gpu_number=gpu_number,  # Sets which GPU will be used (if cpu_only=False)
                 batch_size=batch_size,
             )
-            metrics_path = tuple(
+            metrics_path = next(
                 (eval_output_path / f"evaluation_{weights_path.stem}_{csv.stem}").glob(
                     "*_metrics.json"
                 )
-            )[0]
+            )
             if metrics_path.is_file():
                 with metrics_path.open() as f:
                     outputs[weights_name][csv_name] = json.load(f)
@@ -113,7 +114,7 @@ def plot_coloured_tables(
     max_figure_columns: int = 3,
 ) -> Figure:
     table_rows: tuple[str, ...] = tuple(all_metrics_dict.keys())
-    table_columns = tuple(tuple(all_metrics_dict.values())[0].keys())
+    table_columns = tuple(next(iter(all_metrics_dict.values())).keys())
 
     n_table_rows = len(table_rows)
     n_table_cols = len(table_columns)

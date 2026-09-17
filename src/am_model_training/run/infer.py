@@ -1,12 +1,12 @@
 from __future__ import annotations
-import logging
+
 import json
-from pathlib import Path
+import logging
 from importlib.metadata import distributions
+from pathlib import Path
 
-import tifffile
 import numpy as np
-
+import tifffile
 import torch
 from torch.amp import autocast
 
@@ -24,8 +24,8 @@ except ImportError:
 
 from monai.data import decollate_batch
 
-from am_model_training.utils import MONAI_KEYS
 from am_model_training.setup import InferenceObjects, InferenceParameters
+from am_model_training.utils import MONAI_KEYS
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -72,7 +72,6 @@ def run(
             unit="step",
             leave=False,
         ):
-            inference_objects.dataloader.sampler
             with autocast(inference_objects.device.type):
                 batch_data[MONAI_KEYS.IMAGE]
                 images = batch_data[MONAI_KEYS.IMAGE].to(inference_objects.device)

@@ -1,18 +1,20 @@
 from __future__ import annotations
+
 import os
 import typing
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from os import PathLike
+
     from numpy.typing import NDArray
 
-__all__ = ["paths_dataframe_from_csv", "paths_array_from_csv"]
+__all__ = ["paths_array_from_csv", "paths_dataframe_from_csv"]
 
 
 def paths_dataframe_from_csv(

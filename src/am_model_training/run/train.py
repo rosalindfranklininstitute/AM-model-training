@@ -1,17 +1,17 @@
 from __future__ import annotations
-import logging
-import typing
-import time
+
 import json
-from pathlib import Path
+import logging
+import time
+import typing
 from contextlib import nullcontext
+from pathlib import Path
 
-import pandas as pd
+import mlflow
 import numpy as np
-
+import pandas as pd
 import torch
 from torch.amp import autocast
-import mlflow
 
 try:
     from IPython import get_ipython
@@ -27,8 +27,12 @@ except ImportError:
 
 from monai.data import decollate_batch
 
-from am_model_training.utils import MONAI_KEYS
-from am_model_training.metrics import MetricsOutput, Metrics
+from am_model_training.metrics import Metrics, MetricsOutput
+from am_model_training.run.mlflow import (
+    log_training_objects_to_mlflow,
+    submit_images_to_mlflow,
+    submit_validation_images_to_mflow,
+)
 from am_model_training.run.utils import (
     clear_memory,
     get_mean_of_key_metrics,
@@ -36,12 +40,8 @@ from am_model_training.run.utils import (
     get_model_artifact_path,
     get_requirements,
 )
-from am_model_training.run.mlflow import (
-    log_training_objects_to_mlflow,
-    submit_images_to_mlflow,
-    submit_validation_images_to_mflow,
-)
 from am_model_training.run.validate import validate
+from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from am_model_training.setup import TrainingObjects, TrainingParameters
@@ -201,7 +201,7 @@ def run(
 
             if save_all or best_train_epoch or best_val_epoch:
                 torch.save(training_objects.model.state_dict(), epoch_model_path)
-                tqdm.write(f"Model saved: {str(epoch_model_path)}")
+                tqdm.write(f"Model saved: {epoch_model_path!s}")
                 if model_signature is not None:
                     mlflow.pytorch.log_model(
                         training_objects.model,

@@ -1,14 +1,14 @@
 from __future__ import annotations
-import logging
+
 import json
+import logging
 import typing
 from pathlib import Path
 
+import mlflow
 import numpy as np
-
 import torch
 from torch.amp import autocast
-import mlflow
 
 try:
     from IPython import get_ipython
@@ -24,20 +24,20 @@ except ImportError:
 
 from monai.data import decollate_batch
 
-from am_model_training.utils import MONAI_KEYS
-from am_model_training.metrics import MetricsOutput, Metrics
+from am_model_training.metrics import Metrics, MetricsOutput
 from am_model_training.run.utils import (
     get_mean_of_key_metrics,
     get_metrics_to_log,
 )
+from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from am_model_training.setup import (
-        TrainingObjects,
-        TrainingParameters,
         EvaluationObjects,
         EvaluationParameters,
         StageObjects,
+        TrainingObjects,
+        TrainingParameters,
     )
     from am_model_training.setup.abstract import _AbstractModelObjects
 

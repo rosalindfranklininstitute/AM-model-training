@@ -1,14 +1,13 @@
 from __future__ import annotations
+
 import logging
 import typing
-from dataclasses import dataclass, asdict
-
+from dataclasses import asdict, dataclass
 
 from am_model_training.setup.abstract import (
     _AbstractInferenceObjects,
     _AbstractMetricsObjects,
 )
-
 
 _logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
-import re
+
 import json
+import re
 import typing
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from am_model_training.main import evaluate
 if typing.TYPE_CHECKING:
     from os import PathLike
 
-weights_epoch_pattern = re.compile(r".*epoch_?(\d{0,3}).pth", re.I)
+weights_epoch_pattern = re.compile(r".*epoch_?(\d{0,3}).pth", re.IGNORECASE)
 
 
 def get_epoch_from_path(path: Path) -> int:
@@ -34,7 +35,7 @@ def eval_for_multiple_epochs(
     weights_directory = Path(weights_directory)
 
     weights_paths = sorted(
-        ((get_epoch_from_path(path), path) for path in weights_directory.glob("*.pth"))
+        (get_epoch_from_path(path), path) for path in weights_directory.glob("*.pth")
     )
     all_evaluation_metrics = []
     for epoch, weights_path in tqdm(
@@ -55,11 +56,11 @@ def eval_for_multiple_epochs(
                 log_mlflow=False,
                 mlflow_experiment_name="ap_model_evaluating",
             )
-            metrics_path = tuple(
+            metrics_path = next(
                 (output_path / f"evaluation_{weights_path.stem}_{csv.stem}").glob(
                     "*_metrics.json"
                 )
-            )[0]
+            )
             if metrics_path.is_file():
                 with metrics_path.open() as f:
                     all_evaluation_metrics.append(json.load(f))
