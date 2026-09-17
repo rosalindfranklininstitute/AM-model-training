@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import argparse
 from pathlib import Path
 
@@ -64,8 +65,8 @@ def create_parser() -> argparse.ArgumentParser:
 def parse_arguments(parser: argparse.ArgumentParser) -> None:
     namespace = parser.parse_args()
 
-    from am_model_training.main import infer
     from am_model_training.files import combine_csvs
+    from am_model_training.main import infer
 
     namespace.output_path.mkdir(exist_ok=True)
 

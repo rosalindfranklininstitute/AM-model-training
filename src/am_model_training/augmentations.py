@@ -1,26 +1,28 @@
 from __future__ import annotations
+
 import typing
 from random import Random
 
-import torch
 import numpy as np
-from torchvision.transforms.v2 import (
-    functional as functional_transforms,
-    InterpolationMode,
-    GaussianBlur,
-)
-from torchvision.transforms import RandomResizedCrop
-from torchvision.transforms.functional import resized_crop
-
+import torch
 from monai import data, transforms
+from monai.data.meta_obj import get_track_meta
 from monai.transforms.io.dictionary import LoadImaged
 from monai.utils.type_conversion import convert_to_tensor
-from monai.data.meta_obj import get_track_meta
+from torchvision.transforms import RandomResizedCrop
+from torchvision.transforms.functional import resized_crop
+from torchvision.transforms.v2 import (
+    GaussianBlur,
+    InterpolationMode,
+)
+from torchvision.transforms.v2 import (
+    functional as functional_transforms,
+)
 
 from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Mapping, Hashable, Collection, Sequence
+    from collections.abc import Collection, Hashable, Mapping, Sequence
 
     from numpy.typing import NDArray
 

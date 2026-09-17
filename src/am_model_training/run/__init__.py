@@ -1,26 +1,23 @@
 from __future__ import annotations
+
 import logging
 import typing
-from math import ceil
 from datetime import datetime
-from pathlib import Path
+from math import ceil
 from os import PathLike
+from pathlib import Path
 
+import mlflow
 import numpy as np
-
 from monai.data.dataset import Dataset
 from monai.utils import set_determinism
 
-from am_model_training import setup
-from am_model_training import files
-from am_model_training.run import train, validate, infer
-from am_model_training import models
-from am_model_training import losses
-
-import mlflow
+from am_model_training import files, losses, models, setup
+from am_model_training.run import infer, train, validate
 
 if typing.TYPE_CHECKING:
     from os import PathLike
+
     from pandas import DataFrame
 
 _logger = logging.getLogger(__package__)

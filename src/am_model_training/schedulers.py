@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 
-from torch.optim import lr_scheduler as torch_lr_scheduler, Optimizer
 from monai.optimizers import lr_scheduler as monai_lr_scheduler
+from torch.optim import Optimizer
+from torch.optim import lr_scheduler as torch_lr_scheduler
 
 if typing.TYPE_CHECKING:
     from collections.abc import Callable

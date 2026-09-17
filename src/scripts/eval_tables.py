@@ -1,10 +1,11 @@
 from __future__ import annotations
-from pathlib import Path
+
 import json
 import typing
+from pathlib import Path
 
-import numpy as np
 import matplotlib as mpl
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 

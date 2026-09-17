@@ -1,10 +1,10 @@
 from __future__ import annotations
-import pytest
-from pandas.testing import assert_frame_equal
 
 import typing
 
 import pandas as pd
+import pytest
+from pandas.testing import assert_frame_equal
 
 from am_model_training.files import paths_dataframe_from_csv
 from am_model_training.utils import MONAI_KEYS

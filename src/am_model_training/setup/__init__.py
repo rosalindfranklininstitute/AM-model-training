@@ -1,33 +1,32 @@
 from __future__ import annotations
+
 import logging
 import typing
 from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-
 import torch
-
 from monai import data, transforms
-from am_model_training.augmentations import get_transform_list
-from am_model_training.utils import MONAI_KEYS
 
-from am_model_training.setup.train import (
-    TrainingObjects,
-    TrainingParameters,
-    setup_training_objects,
-)
+from am_model_training.augmentations import get_transform_list
 from am_model_training.setup.eval import (
     EvaluationObjects,
     EvaluationParameters,
     setup_evaluation_objects,
 )
-from am_model_training.setup.stage import StageObjects
 from am_model_training.setup.inference import (
     InferenceObjects,
     InferenceParameters,
     setup_inference_objects,
 )
+from am_model_training.setup.stage import StageObjects
+from am_model_training.setup.train import (
+    TrainingObjects,
+    TrainingParameters,
+    setup_training_objects,
+)
+from am_model_training.utils import MONAI_KEYS
 
 if typing.TYPE_CHECKING:
     from numpy.typing import NDArray

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import torch
-
 from torchmetrics.classification import (
     MulticlassAccuracy,
-    MulticlassPrecision,
-    MulticlassF1Score,
-    MulticlassRecall,
     MulticlassConfusionMatrix,
+    MulticlassF1Score,
+    MulticlassPrecision,
+    MulticlassRecall,
 )
 
 from am_model_training.metrics import get_metrics_from_confusion_matrix

@@ -1,16 +1,18 @@
 from __future__ import annotations
+
 import typing
 
+import segmentation_models_pytorch as smp
 import torch
 from monai import losses
-import segmentation_models_pytorch as smp
 
 if typing.TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from collections.abc import Callable, Sequence
+
     from numpy import float32 as np_float32
+    from numpy.typing import NDArray
     from torch import Tensor
     from torch._prims_common import DeviceLikeType
-    from collections.abc import Callable, Sequence
 
 
 def weights_to_tensor(weights: Sequence[float], device: DeviceLikeType) -> Tensor:

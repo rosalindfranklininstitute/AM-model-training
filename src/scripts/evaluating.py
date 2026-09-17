@@ -1,9 +1,10 @@
 from __future__ import annotations
-from pathlib import Path
-import typing
 
-from am_model_training.main import evaluate
+import typing
+from pathlib import Path
+
 from am_model_training.files import combine_csvs
+from am_model_training.main import evaluate
 
 if typing.TYPE_CHECKING:
     from os import PathLike

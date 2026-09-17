@@ -1,6 +1,7 @@
 from __future__ import annotations
-import re
+
 import json
+import re
 import typing
 from pathlib import Path
 

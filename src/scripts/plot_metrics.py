@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import json
 import logging
 import typing
-import json
 from pathlib import Path
 from string import ascii_lowercase
 

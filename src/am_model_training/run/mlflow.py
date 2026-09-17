@@ -1,18 +1,18 @@
 from __future__ import annotations
+
 import logging
-import typing
 import time
+import typing
 from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import mlflow
+import numpy as np
 import torch
 from torch.amp import autocast
 from torch.nn.functional import one_hot
 from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import draw_segmentation_masks
-import mlflow
 
 try:
     from IPython import get_ipython
@@ -26,7 +26,7 @@ try:
 except ImportError:
     from tqdm import tqdm
 
-from monai.data import decollate_batch, Dataset
+from monai.data import Dataset, decollate_batch
 from monai.transforms import Compose
 
 from am_model_training.utils import MONAI_KEYS
