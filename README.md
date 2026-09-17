@@ -33,7 +33,7 @@ To activate the virtual environment on Linux systems: `source .venv/bin/activate
 
 ```Shell
 # Create a virtual environment
-conda create -p ./.venv
+conda create -p ./.venv python pip
 
 # Activate the virtual environment
 conda activate ./.venv
