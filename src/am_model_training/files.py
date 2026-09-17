@@ -14,7 +14,7 @@ if typing.TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-__all__ = ["paths_dataframe_from_csv", "paths_array_from_csv"]
+__all__ = ["paths_array_from_csv", "paths_dataframe_from_csv"]
 
 
 def paths_dataframe_from_csv(

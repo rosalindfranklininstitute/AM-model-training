@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from datetime import datetime
+from datetime import datetime, timezone
 from math import ceil
 from os import PathLike
 from pathlib import Path
@@ -253,15 +253,14 @@ def run_training(
         validation_csv_path = None
         input_name = csv_path.stem
 
-    timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
+    timestamp = datetime.now(tz=timezone.utc).strftime("%y%m%d_%H%M%S")
     timestamp_subdirectory = output_path / f"training_{timestamp}"
     try:
         timestamp_subdirectory.mkdir()
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create timestamp subdirectory '%s'",
             str(timestamp_subdirectory),
-            exc_info=True,
         )
         raise
 
@@ -438,10 +437,9 @@ def run_evaluation(
     try:
         subdirectory.mkdir()
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create subdirectory '%s'",
             str(subdirectory),
-            exc_info=True,
         )
         raise
 
@@ -631,10 +629,9 @@ def run_inference(
         # Less worried about overwriting with inference
         subdirectory.mkdir(exist_ok=True)
     except OSError:
-        _logger.error(
+        _logger.exception(
             "Failed to create subdirectory '%s'",
             str(subdirectory),
-            exc_info=True,
         )
         raise
 

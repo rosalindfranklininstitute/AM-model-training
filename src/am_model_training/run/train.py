@@ -201,7 +201,7 @@ def run(
 
             if save_all or best_train_epoch or best_val_epoch:
                 torch.save(training_objects.model.state_dict(), epoch_model_path)
-                tqdm.write(f"Model saved: {str(epoch_model_path)}")
+                tqdm.write(f"Model saved: {epoch_model_path!s}")
                 if model_signature is not None:
                     mlflow.pytorch.log_model(
                         training_objects.model,

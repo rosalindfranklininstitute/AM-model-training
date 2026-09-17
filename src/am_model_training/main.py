@@ -107,16 +107,16 @@ def train(
             submit_training_images=False,
             seed=seed,
         )
-    finally:  # noqa: E722
+    finally:
         try:
             with torch.no_grad():
                 torch.cuda.empty_cache()
         except Exception:
-            _logger.error("Failed to clear CUDA cache", exc_info=True)
+            _logger.exception("Failed to clear CUDA cache")
         try:
             mlflow.end_run()
         except:  # noqa: E722
-            _logger.error("Failed to end MLFlow run", exc_info=True)
+            _logger.exception("Failed to end MLFlow run")
 
 
 def evaluate(
@@ -175,16 +175,16 @@ def evaluate(
             batch_size=batch_size,
             log_mlflow=log_mlflow,
         )
-    finally:  # noqa: E722
+    finally:
         try:
             with torch.no_grad():
                 torch.cuda.empty_cache()
         except Exception:
-            _logger.error("Failed to clear CUDA cache", exc_info=True)
+            _logger.exception("Failed to clear CUDA cache")
         try:
             mlflow.end_run()
         except:  # noqa: E722
-            _logger.error("Failed to end MLFlow run", exc_info=True)
+            _logger.exception("Failed to end MLFlow run")
 
 def infer(
     output_path: str | PathLike[str],
@@ -215,9 +215,9 @@ def infer(
             gpu_number=gpu_number,
             batch_size=batch_size,
         )
-    finally:  # noqa: E722
+    finally:
         try:
             with torch.no_grad():
                 torch.cuda.empty_cache()
         except Exception:
-            _logger.error("Failed to clear CUDA cache", exc_info=True)
+            _logger.exception("Failed to clear CUDA cache")

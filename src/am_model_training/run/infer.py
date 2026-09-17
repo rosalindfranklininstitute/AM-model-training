@@ -72,7 +72,6 @@ def run(
             unit="step",
             leave=False,
         ):
-            inference_objects.dataloader.sampler
             with autocast(inference_objects.device.type):
                 batch_data[MONAI_KEYS.IMAGE]
                 images = batch_data[MONAI_KEYS.IMAGE].to(inference_objects.device)

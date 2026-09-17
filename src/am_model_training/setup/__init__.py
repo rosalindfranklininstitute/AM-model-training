@@ -34,19 +34,19 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 __all__ = [
+    "EvaluationObjects",
+    "EvaluationParameters",
+    "InferenceObjects",
+    "InferenceParameters",
+    "StageObjects",
+    "TrainingObjects",
+    "TrainingParameters",
     "create_dataset",
     "create_datasets",
     "get_device",
-    "TrainingObjects",
-    "TrainingParameters",
-    "setup_training_objects",
-    "EvaluationObjects",
-    "EvaluationParameters",
     "setup_evaluation_objects",
-    "StageObjects",
-    "InferenceObjects",
-    "InferenceParameters",
     "setup_inference_objects",
+    "setup_training_objects",
 ]
 
 

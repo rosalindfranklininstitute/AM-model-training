@@ -100,7 +100,6 @@ def submit_validation_images_to_mflow(
         mlflow.flush_async_logging()
 
 
-
 def submit_images_to_mlflow(
     images: torch.Tensor,
     labels: torch.Tensor,
@@ -195,7 +194,7 @@ def log_training_objects_to_mlflow(training_objects: TrainingObjects) -> None:
             mlflow.log_param(
                 name,
                 tuple(
-                    f"{_.__class__.__name__}({dict(((k, v) for k, v in _.__dict__.items() if not k.startswith('_')))})"
+                    f"{_.__class__.__name__}({{k: v for k, v in _.__dict__.items() if not k.startswith('_')}})"
                     for _ in obj.transforms
                 ),
             )

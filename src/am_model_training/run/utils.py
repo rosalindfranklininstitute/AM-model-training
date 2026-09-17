@@ -11,10 +11,10 @@ if typing.TYPE_CHECKING:
     from collections.abc import Iterable
 
 __all__ = [
-    "get_model_artifact_path",
     "clear_memory",
     "get_mean_of_key_metrics",
     "get_metrics_to_log",
+    "get_model_artifact_path",
 ]
 
 
