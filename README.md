@@ -55,6 +55,18 @@ If using CUDA, the version must be below or equal to the the system CUDA version
 
 ## Usage
 
+Models and data are available from zenodo: https://zenodo.org/records/21804785. For training a new model using `am-train`, you may wish to include some of the data shared here in addition to newly collected data. Alternatively, refining a an existing model with new data using `am-refine` can work well and requires less compute; we recommend starting with AM_SEM_All_V01.pth ([download link](https://zenodo.org/records/21804785/files/AM_SEM_All_V01.pth)).
+
+CSV files should be in the form (`am-infer` can run without the labels):
+```
+/path/to/image1.tiff,/path/to/labels1.tiff
+/path/to/image2.tiff,/path/to/labels2.tiff
+```
+
+
+We encourage you to contribute your models and training data back to the project so that others may share the benefit. To do this, please contact [casper.berger@rfi.ac.uk](mailto:casper.berger@rfi.ac.uk).
+
+
 ### Train a new model: `am-train`
 
 ```
