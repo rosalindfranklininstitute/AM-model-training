@@ -12,7 +12,9 @@ This package is available from PyPI as [am-model-training](https://pypi.org/p/am
 1. Decide where you want to create your Python virtual environment and open a terminal in that location.
 2. Follow the one of the sets of instructions below. We recommend using 'uv' as it handles installing the appropriate torch backend automatically.
 
-### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
+---
+
+### Install using [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
 
 ```Shell
 # Create a virtual environment
@@ -27,7 +29,9 @@ uv pip install am-model-training --torch-backend auto
 
 To activate the virtual environment on Linux systems: `source .venv/bin/activate`
 
-### [miniforge](https://conda-forge.org/download/)
+---
+
+### Install using [miniforge](https://conda-forge.org/download/)
 
 ```Shell
 # Create a virtual environment
@@ -53,7 +57,21 @@ If using CUDA, the version must be below or equal to the the system CUDA version
 | CUDA 12.6        | https://download.pytorch.org/whl/cu126 |
 | CUDA 12.8        | https://download.pytorch.org/whl/cu128 |
 
+---
+
 ## Usage
+
+Models and data are available from zenodo: https://zenodo.org/records/21804785. For training a new model using `am-train`, you may wish to include some of the data shared here in addition to newly collected data. Alternatively, refining a an existing model with new data using `am-refine` can work well and requires less compute; we recommend starting with AM_SEM_All_V01.pth ([download link](https://zenodo.org/records/21804785/files/AM_SEM_All_V01.pth)).
+
+CSV files should be in the form (`am-infer` can run without the labels):
+```
+/path/to/image1.tiff,/path/to/labels1.tiff
+/path/to/image2.tiff,/path/to/labels2.tiff
+```
+
+
+We encourage you to contribute your models and training data back to the project so that others may share the benefit. To do this, please contact [casper.berger@rfi.ac.uk](mailto:casper.berger@rfi.ac.uk).
+
 
 ### Train a new model: `am-train`
 
