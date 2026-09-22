@@ -12,7 +12,9 @@ This package is available from PyPI as [am-model-training](https://pypi.org/p/am
 1. Decide where you want to create your Python virtual environment and open a terminal in that location.
 2. Follow the one of the sets of instructions below. We recommend using 'uv' as it handles installing the appropriate torch backend automatically.
 
-### [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
+---
+
+### Install using [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
 
 ```Shell
 # Create a virtual environment
@@ -27,7 +29,9 @@ uv pip install am-model-training --torch-backend auto
 
 To activate the virtual environment on Linux systems: `source .venv/bin/activate`
 
-### [miniforge](https://conda-forge.org/download/)
+---
+
+### Install using [miniforge](https://conda-forge.org/download/)
 
 ```Shell
 # Create a virtual environment
@@ -52,6 +56,8 @@ If using CUDA, the version must be below or equal to the the system CUDA version
 | CUDA 11.8        | https://download.pytorch.org/whl/cu118 |
 | CUDA 12.6        | https://download.pytorch.org/whl/cu126 |
 | CUDA 12.8        | https://download.pytorch.org/whl/cu128 |
+
+---
 
 ## Usage
 
